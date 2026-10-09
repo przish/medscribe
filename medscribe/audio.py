@@ -30,7 +30,7 @@ def clean_tagalog_speech_text(text: str) -> str:
         text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
     return text
 
-def get_whisper_model(model_size: str = "base") -> WhisperModel:
+def get_whisper_model(model_size: str = "medium") -> WhisperModel:
     """Load or return the singleton local Whisper model on CPU with offline priority."""
     global _MODEL_CACHE
     if model_size not in _MODEL_CACHE:
@@ -45,7 +45,7 @@ def get_whisper_model(model_size: str = "base") -> WhisperModel:
 def transcribe_audio_bytes(
     audio_bytes: bytes,
     language: Optional[str] = None,
-    model_size: str = "base",
+    model_size: str = "medium",
     initial_prompt: Optional[str] = None,
 ) -> str:
     """

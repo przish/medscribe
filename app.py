@@ -17,20 +17,22 @@ from medscribe.ui_text import (
     unassessed_label, UNASSESSED_COPY,
 )
 
-# Configure Streamlit Page
+# =============================================================================
+# STREAMLIT PAGE CONFIGURATION
+# =============================================================================
 st.set_page_config(
     page_title="Medscribe · Clinical Documentation Audit",
     page_icon="⚕",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "fixtures")
 
 FIXTURE_PRESETS = {
-    "Maria Santos · Hypertension follow-up": "encounter_01_hypertension_followup.json",
-    "Ethan Ramirez · Pediatric cough": "encounter_02_pediatric_cough_edgecase.json",
-    "Roberto Cruz · Routine checkup (audit case)": "encounter_03_adversarial_hallucination_trap.json",
+    "Maria Santos · Hypertension Follow-up": "encounter_01_hypertension_followup.json",
+    "Ethan Ramirez · Pediatric Cough (Edge Case)": "encounter_02_pediatric_cough_edgecase.json",
+    "Roberto Cruz · Routine Checkup (Audit Trap)": "encounter_03_adversarial_hallucination_trap.json",
     "Ginoong Dela Cruz · Tagalog Consultation": "encounter_04_tagalog_consultation.json",
 }
 
@@ -73,136 +75,48 @@ def load_preset_encounter(preset_name: str, engine_mode: str):
     st.session_state.draft_note = draft
     st.session_state.loaded_preset = preset_name
     st.session_state.loaded_engine = engine_mode
-    st.session_state.audio_expanded = False
     st.session_state.transcribed_audio_text = None
     
-    # Auto-initialize right-hand pane with highest-priority flagged item
     def_claim = get_highest_priority_claim(draft)
     st.session_state.selected_claim = def_claim
     st.session_state.highlighted_seg_ids = list(def_claim.source_segment_ids) if def_claim else []
 
 # =============================================================================
-# SIDEBAR: ENCOUNTER, INFERENCE ENGINE & SYNTHETIC TESTING CONTROLS
-# =============================================================================
-with st.sidebar:
-    st.markdown("### ⚕ Medscribe Workstation")
-    st.caption("Offline-first clinical decision support for SOAP documentation verification.")
-    st.caption("Local demo session · not authenticated")
-    if st.button("Lock demo workspace", key="btn_lock_demo", use_container_width=True):
-        st.session_state.local_demo_access = False
-        st.rerun()
-    st.markdown("---")
-    
-    st.markdown("#### Clinical Encounter")
-    preset_options = list(FIXTURE_PRESETS.keys())
-    curr_preset = st.session_state.get("loaded_preset", preset_options[0])
-    if curr_preset not in preset_options:
-        preset_options.append(curr_preset)
-    idx_preset = preset_options.index(curr_preset) if curr_preset in preset_options else 0
-    selected_preset = st.selectbox(
-        "Select Encounter",
-        preset_options,
-        index=idx_preset,
-        key="ctl_preset",
-        help="Load pre-calibrated synthetic patient encounters or recorded consultations.",
-    )
-    
-    st.markdown("#### Inference Engine")
-    engine_options = (
-        ["Local Ollama (Active)", "Deterministic Clinical Adapter", "Adversarial Test Mode"]
-        if ollama_online else ["Deterministic Clinical Adapter", "Adversarial Test Mode"]
-    )
-    curr_engine = st.session_state.get("loaded_engine", engine_options[0])
-    idx_engine = engine_options.index(curr_engine) if curr_engine in engine_options else 0
-    selected_engine = st.selectbox(
-        "Local Inference Engine",
-        engine_options,
-        index=idx_engine,
-        key="ctl_engine",
-        help="On-device inference pipeline ensuring 100% offline privacy.",
-    )
-    
-    st.markdown("---")
-    with st.expander("🧪 Custom Consultation Generator", expanded=False):
-        st.caption("Paste arbitrary consultation dialogue to evaluate on-device evidence linking.")
-        cu_enc = st.text_input("Encounter Code", value="ENC-CUSTOM-001", key="sb_cu_enc")
-        cu_pat = st.text_input("Patient Identifier (Synthetic)", value="SYN-PAT-CUSTOM", key="sb_cu_pat")
-        cu_txt = st.text_area(
-            "Consultation Dialogue",
-            height=180,
-            key="sb_cu_txt",
-            placeholder="Clinician: How have you been feeling?\nPatient: The headache has subsided, but blood pressure is still high.",
-        )
-        if st.button("Generate SOAP Draft", type="primary", key="sb_btn_generate", use_container_width=True):
-            if cu_txt.strip():
-                pipeline = MedscribePipeline(adapter=get_adapter(selected_engine))
-                new_t = pipeline.parse_raw_text_to_transcript(cu_txt, encounter_id=cu_enc, patient_id=cu_pat)
-                new_draft = pipeline.process_encounter(new_t)
-                st.session_state.active_transcript = new_t
-                st.session_state.draft_note = new_draft
-                st.session_state.loaded_preset = "Custom Encounter"
-                st.session_state.last_preset_selection = "Custom Encounter"
-                def_claim = get_highest_priority_claim(new_draft)
-                st.session_state.selected_claim = def_claim
-                st.session_state.highlighted_seg_ids = list(def_claim.source_segment_ids) if def_claim else []
-                st.rerun()
-
-# Handle Encounter or Engine Changes
-if "last_preset_selection" not in st.session_state:
-    st.session_state.last_preset_selection = selected_preset
-preset_changed = (selected_preset != st.session_state.last_preset_selection
-                  and selected_preset in FIXTURE_PRESETS)
-engine_changed = (st.session_state.get("loaded_engine") != selected_engine
-                  and st.session_state.get("loaded_preset") in FIXTURE_PRESETS)
-
-if preset_changed:
-    st.session_state.last_preset_selection = selected_preset
-    load_preset_encounter(selected_preset, selected_engine)
-elif engine_changed:
-    if selected_preset in FIXTURE_PRESETS:
-        load_preset_encounter(selected_preset, selected_engine)
-elif "draft_note" not in st.session_state:
-    fallback = selected_preset if selected_preset in FIXTURE_PRESETS else list(FIXTURE_PRESETS.keys())[0]
-    load_preset_encounter(fallback, selected_engine)
-
-draft: SOAPNoteDraft = st.session_state.draft_note
-transcript: Transcript = st.session_state.active_transcript
-LINES = line_map(transcript)
-
-# Auto-select if selected_claim became None or uninitialized
-if st.session_state.get("selected_claim") is None:
-    def_claim = get_highest_priority_claim(draft)
-    st.session_state.selected_claim = def_claim
-    st.session_state.highlighted_seg_ids = list(def_claim.source_segment_ids) if def_claim else []
-
-# =============================================================================
-# STYLE SYSTEM: ENTERPRISE EHR AUDIT WORKSTATION
+# ENTERPRISE CLINICAL DESIGN SYSTEM (CSS)
 # =============================================================================
 st.markdown(
     """
     <style>
+    /* Clean Minimalist Clinical Design System */
     :root {
-        --bg: #F8FAFC;
-        --ink: #0F172A;
-        --muted: #475569;
-        --line: #E2E8F0;
-        --accent: #1D4ED8;
-        --accent-bg: #EFF6FF;
-        --amber-bg: #FEF3C7;
-        --amber-ink: #78350F;
-        --amber-bar: #B45309;
-        --red-bg: #FEE2E2;
-        --red-ink: #7F1D1D;
-        --red-bar: #B91C1C;
-        --green-bg: #ECFDF5;
-        --green-ink: #065F46;
-        --green-bar: #059669;
+        --canvas-bg: #F8FAFC;
+        --card-bg: #FFFFFF;
+        --ink-primary: #0F172A;
+        --ink-secondary: #334155;
+        --ink-muted: #64748B;
+        --border-color: #E2E8F0;
+        --brand-teal: #0F766E;
+        --brand-teal-light: #F0FDFA;
+        --brand-teal-hover: #115E59;
+        
+        --color-crit-bg: #FFF1F2;
+        --color-crit-border: #FECACA;
+        --color-crit-text: #991B1B;
+        
+        --color-warn-bg: #FFFBEB;
+        --color-warn-border: #FDE68A;
+        --color-warn-text: #92400E;
+        
+        --color-ok-bg: #ECFDF5;
+        --color-ok-border: #A7F3D0;
+        --color-ok-text: #065F46;
     }
     
     html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"] {
-        background: var(--bg) !important;
-        color: var(--ink);
-        font-family: Inter, "Source Sans 3", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+        background-color: var(--canvas-bg) !important;
+        color: var(--ink-primary) !important;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+        -webkit-font-smoothing: antialiased;
     }
     
     [data-testid="stHeader"], [data-testid="stToolbar"], [data-testid="stDecoration"], footer {
@@ -210,288 +124,301 @@ st.markdown(
     }
     
     .block-container {
-        padding: 0.8rem 1.5rem 2.5rem 1.5rem !important;
-        max-width: 1600px !important;
+        padding: 1.2rem 2rem 3rem 2rem !important;
+        max-width: 1680px !important;
     }
     
-    .mono {
-        font-family: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace !important;
-        font-variant-numeric: tabular-nums;
-    }
-
-    /* Primary Note & Evidence Pane Containers */
-    .st-key-note_pane, .st-key-drawer_pane {
-        background: #FFFFFF !important;
-        border: 1px solid var(--line) !important;
-        border-radius: 8px !important;
-        padding: 20px 24px !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
-    }
-    
-    .st-key-drawer_pane {
-        position: sticky !important;
-        top: 12px !important;
-        max-height: calc(100vh - 28px) !important;
-        overflow-y: auto !important;
-    }
-
-    /* Top Patient Summary Bar */
-    .patient-header {
+    /* Top Bar Branding */
+    .top-navbar {
         display: flex;
-        align-items: baseline;
         justify-content: space-between;
-        padding: 0 2px 10px 2px;
-        margin-bottom: 8px;
-        border-bottom: 1px solid var(--line);
+        align-items: center;
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 14px 22px;
+        margin-bottom: 16px;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
     }
-    .patient-header .title {
-        font-size: 1.15rem;
+    .brand-title {
+        font-size: 1.25rem;
         font-weight: 800;
-        color: var(--ink);
+        letter-spacing: -0.02em;
+        color: var(--ink-primary);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .brand-badge {
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        background: #CCFBF1;
+        color: #0F766E;
+        padding: 3px 8px;
+        border-radius: 4px;
+        border: 1px solid #99F6E4;
+    }
+    .brand-sub {
+        font-size: 0.82rem;
+        color: var(--ink-muted);
+        margin-top: 2px;
+    }
+    .user-pill {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: #F1F5F9;
+        border: 1px solid var(--border-color);
+        padding: 6px 14px;
+        border-radius: 6px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: var(--ink-secondary);
+    }
+
+    /* Encounter Source Selector Card */
+    .source-selector-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 16px 20px;
+        margin-bottom: 16px;
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+    }
+
+    /* Patient Header Banner */
+    .patient-banner {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 14px 20px;
+        margin-bottom: 14px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.02);
+    }
+    .patient-name {
+        font-size: 1.15rem;
+        font-weight: 750;
+        color: var(--ink-primary);
         letter-spacing: -0.01em;
     }
-    .patient-header .meta {
-        font-size: 0.88rem;
-        color: var(--muted);
-        font-weight: 500;
-        margin-left: 8px;
-    }
-    .badge-review-count {
-        background: var(--amber-bg);
-        color: var(--amber-ink);
-        font-weight: 700;
-        padding: 2px 8px;
-        border-radius: 4px;
+    .patient-meta {
         font-size: 0.82rem;
-        border: 1px solid rgba(180, 83, 9, 0.2);
+        color: var(--ink-muted);
+        margin-left: 12px;
     }
-    .badge-ok-count {
-        background: var(--green-bg);
-        color: var(--green-ink);
+    .status-badge-crit {
+        background: var(--color-crit-bg);
+        border: 1px solid var(--color-crit-border);
+        color: var(--color-crit-text);
+        font-size: 0.78rem;
         font-weight: 700;
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-size: 0.82rem;
-        border: 1px solid rgba(5, 150, 105, 0.2);
+        padding: 5px 12px;
+        border-radius: 6px;
+        letter-spacing: 0.02em;
+    }
+    .status-badge-ok {
+        background: var(--color-ok-bg);
+        border: 1px solid var(--color-ok-border);
+        color: var(--color-ok-text);
+        font-size: 0.78rem;
+        font-weight: 700;
+        padding: 5px 12px;
+        border-radius: 6px;
+        letter-spacing: 0.02em;
     }
 
-    /* Section Typography */
-    .sec-header {
-        font-size: 0.78rem;
+    /* Primary Note & Drawer Containers */
+    .st-key-note_pane, .st-key-drawer_pane {
+        background: var(--card-bg) !important;
+        border: 1px solid var(--border-color) !important;
+        border-radius: 8px !important;
+        padding: 22px 24px !important;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04) !important;
+    }
+
+    /* Section Headings */
+    .soap-sec-title {
+        font-size: 0.86rem;
         font-weight: 800;
         letter-spacing: 0.08em;
         text-transform: uppercase;
-        border-bottom: 2px solid var(--ink);
-        padding-bottom: 3px;
-        margin: 20px 0 6px 0;
-        color: var(--ink);
+        color: #0F766E;
+        padding-bottom: 6px;
+        border-bottom: 2px solid #E2E8F0;
+        margin: 20px 0 12px 0;
     }
-    .sec-header:first-of-type {
-        margin-top: 0;
-    }
-    
-    .field-label {
-        font-size: 0.76rem;
+    .soap-field-title {
+        font-size: 0.82rem;
         font-weight: 700;
-        color: var(--muted);
+        color: var(--ink-muted);
+        margin: 12px 0 6px 0;
         text-transform: uppercase;
         letter-spacing: 0.04em;
-        margin: 10px 0 2px 0;
     }
-    
-    /* Compact negative / unassessed statements */
-    .fld-blank-row {
-        font-size: 0.8rem !important;
-        color: #94A3B8 !important;
-        font-style: italic !important;
-        line-height: 1.3 !important;
-        padding: 2px 8px !important;
-        margin-bottom: 4px !important;
+    .fld-blank-notice {
+        font-size: 0.84rem;
+        color: var(--ink-muted);
+        font-style: italic;
+        padding: 6px 10px;
+        background: #F8FAFC;
+        border: 1px dashed #CBD5E1;
+        border-radius: 6px;
+        margin-bottom: 6px;
     }
 
-    /* Statement Row Clickable Buttons */
-    /* Statement Row Clickable Buttons - Sleek EHR Style (No Side Stripes) */
+    /* Crisp Clinical Claim Rows */
     div[class*="claim_row_"] button {
-        width: 100% !important;
-        text-align: left !important;
-        justify-content: flex-start !important;
-        align-items: flex-start !important;
-        padding: 9px 14px !important;
-        min-height: 42px !important;
-        height: auto !important;
-        border-radius: 8px !important;
-        font-size: 0.9rem !important;
+        background: #FFFFFF !important;
+        border: 1px solid var(--border-color) !important;
+        border-radius: 6px !important;
+        padding: 10px 14px !important;
+        font-size: 0.88rem !important;
+        font-weight: 500 !important;
+        color: var(--ink-primary) !important;
         line-height: 1.5 !important;
         white-space: normal !important;
         word-break: break-word !important;
         overflow-wrap: break-word !important;
-        border: 1px solid var(--line) !important;
-        border-left: 1px solid var(--line) !important;
-        margin-bottom: 5px !important;
-        background: #FFFFFF !important;
-        color: var(--ink) !important;
-        transition: all 0.12s ease-in-out !important;
-        box-shadow: none !important;
-    }
-    div[class*="claim_row_"] button p,
-    div[class*="claim_row_"] button div {
-        white-space: normal !important;
-        word-break: break-word !important;
-        overflow-wrap: break-word !important;
         text-align: left !important;
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03) !important;
+        transition: border-color 0.12s ease, background 0.12s ease !important;
+        margin-bottom: 6px !important;
     }
-    
-    div[class*="claim_row_crit"] button {
-        background: #FFF1F2 !important;
-        border: 1px solid #FECACA !important;
-        border-left: 1px solid #FECACA !important;
-        color: #991B1B !important;
-    }
-    div[class*="claim_row_warn"] button {
-        background: #FFFBEB !important;
-        border: 1px solid #FDE68A !important;
-        border-left: 1px solid #FDE68A !important;
-        color: #92400E !important;
-    }
-    div[class*="claim_row_ok"] button {
-        background: #FFFFFF !important;
-        border: 1px solid var(--line) !important;
-        border-left: 1px solid var(--line) !important;
-        color: var(--ink) !important;
-    }
-    div[class*="claim_row_sel"] button {
-        outline: 2px solid var(--accent) !important;
-        outline-offset: 1px !important;
-        background: var(--accent-bg) !important;
-    }
-    
     div[class*="claim_row_"] button:hover {
         background: #F8FAFC !important;
         border-color: #94A3B8 !important;
         cursor: pointer !important;
     }
+    div[class*="claim_row_crit"] button {
+        background: var(--color-crit-bg) !important;
+        border-color: var(--color-crit-border) !important;
+        color: var(--color-crit-text) !important;
+    }
     div[class*="claim_row_crit"] button:hover {
         background: #FEE2E2 !important;
-        border-color: #EF4444 !important;
+        border-color: #F87171 !important;
+    }
+    div[class*="claim_row_warn"] button {
+        background: var(--color-warn-bg) !important;
+        border-color: var(--color-warn-border) !important;
+        color: var(--color-warn-text) !important;
     }
     div[class*="claim_row_warn"] button:hover {
         background: #FEF3C7 !important;
         border-color: #F59E0B !important;
     }
+    div[class*="claim_row_sel"] button {
+        border: 2px solid var(--brand-teal) !important;
+        background: var(--brand-teal-light) !important;
+    }
 
-    /* Right Evidence Pane Styling */
-    .dr-title {
-        font-size: 0.78rem;
+    /* Evidence Drawer Styling */
+    .dr-heading {
+        font-size: 0.84rem;
         font-weight: 800;
         letter-spacing: 0.08em;
         text-transform: uppercase;
-        color: var(--muted);
-        margin-bottom: 8px;
+        color: var(--ink-muted);
         display: flex;
         justify-content: space-between;
         align-items: center;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--border-color);
+        margin-bottom: 12px;
     }
-    
     .quote-box {
-        border: 1px solid var(--line);
-        background: #F1F5F9;
-        padding: 8px 12px;
-        font-size: 0.92rem;
-        line-height: 1.45;
-        margin: 4px 0 12px 0;
-        border-radius: 6px;
+        background: #F8FAFC;
+        border: 1px solid var(--border-color);
+        border-left: 3px solid var(--brand-teal);
+        border-radius: 4px;
+        padding: 11px 15px;
+        font-size: 0.90rem;
+        font-style: italic;
+        color: #1E293B;
+        line-height: 1.55;
+        margin: 6px 0 14px 0;
     }
-    
     .alert-card {
         border-radius: 6px;
-        padding: 10px 12px;
-        margin-bottom: 10px;
-        font-size: 0.88rem;
+        padding: 12px 14px;
+        margin-bottom: 12px;
+        font-size: 0.86rem;
         line-height: 1.5;
         border: 1px solid transparent;
     }
     .alert-card.crit {
-        background: var(--red-bg);
-        border: 1px solid var(--red-bar);
-        color: var(--red-ink);
+        background: var(--color-crit-bg);
+        border-color: var(--color-crit-border);
+        color: var(--color-crit-text);
     }
     .alert-card.warn {
-        background: var(--amber-bg);
-        border: 1px solid var(--amber-bar);
-        color: var(--amber-ink);
+        background: var(--color-warn-bg);
+        border-color: var(--color-warn-border);
+        color: var(--color-warn-text);
     }
     .alert-card.ok {
-        background: var(--green-bg);
-        border: 1px solid var(--green-bar);
-        color: var(--green-ink);
+        background: var(--color-ok-bg);
+        border-color: var(--color-ok-border);
+        color: var(--color-ok-text);
     }
     .alert-card .card-head {
-        font-weight: 700;
-        font-size: 0.9rem;
-        margin-bottom: 2px;
+        font-weight: 750;
+        font-size: 0.88rem;
+        margin-bottom: 4px;
     }
 
-    /* Transcript Turns in Evidence Drawer */
-    div[class*="turn_row_"] button {
-        width: 100% !important;
-        text-align: left !important;
-        justify-content: flex-start !important;
-        padding: 6px 10px !important;
-        min-height: 34px !important;
-        height: auto !important;
-        border-radius: 6px !important;
-        font-size: 0.84rem !important;
-        line-height: 1.4 !important;
-        white-space: normal !important;
-        word-break: break-word !important;
-        border: 1px solid var(--line) !important;
-        margin-bottom: 4px !important;
-        background: #FFFFFF !important;
-        color: var(--ink) !important;
-        box-shadow: none !important;
-        transition: all 0.1s ease-in-out !important;
-    }
-    div[class*="turn_row_hit"] button {
-        background: #DBEAFE !important;
-        border: 1px solid var(--accent) !important;
-        color: #1E3A8A !important;
-    }
-    div[class*="turn_row_"] button:hover {
-        background: #F8FAFC !important;
-        border-color: var(--accent) !important;
-        cursor: pointer !important;
-    }
-
-    /* Streamlit Global Widget Polish */
+    /* Professional Buttons */
     .stButton > button, .stDownloadButton > button {
+        min-height: 38px !important;
         border-radius: 6px !important;
-        border: 1px solid #64748B !important;
-        background: #FFFFFF !important;
-        color: var(--ink) !important;
         font-weight: 600 !important;
-        font-size: 0.82rem !important;
-        min-height: 32px !important;
-        box-shadow: none !important;
-    }
-    .stButton > button:hover {
-        border-color: var(--accent) !important;
-        color: var(--accent) !important;
+        font-size: 0.84rem !important;
+        box-shadow: 0 1px 2px 0 rgba(0,0,0,0.04) !important;
+        transition: all 0.12s ease !important;
     }
     button[kind="primary"] {
-        background: var(--ink) !important;
+        background: var(--brand-teal) !important;
+        border-color: var(--brand-teal) !important;
         color: #FFFFFF !important;
-        border-color: var(--ink) !important;
     }
     button[kind="primary"]:hover {
-        background: #1E293B !important;
-        color: #FFFFFF !important;
+        background: var(--brand-teal-hover) !important;
+        border-color: var(--brand-teal-hover) !important;
     }
-    [data-testid="stTextArea"] textarea {
-        border: 1px solid #64748B !important;
+    button[kind="secondary"] {
+        background: #FFFFFF !important;
+        border: 1px solid #CBD5E1 !important;
+        color: #334155 !important;
+    }
+    button[kind="secondary"]:hover {
+        background: #F8FAFC !important;
+        border-color: #94A3B8 !important;
+        color: var(--ink-primary) !important;
+    }
+
+    /* Inputs & Selectboxes */
+    [data-testid="stTextArea"] textarea, [data-testid="stTextInput"] input, [data-testid="stSelectbox"] [role="combobox"] {
+        border: 1px solid var(--border-color) !important;
         border-radius: 6px !important;
         background: #FFFFFF !important;
-        font-size: 0.92rem !important;
-        line-height: 1.5 !important;
+        color: var(--ink-primary) !important;
+        font-size: 0.86rem !important;
+    }
+    [data-testid="stTextArea"] textarea:focus, [data-testid="stTextInput"] input:focus {
+        border-color: var(--brand-teal) !important;
+        box-shadow: 0 0 0 1px var(--brand-teal) !important;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 960px) {
+        .block-container { padding: 1rem 1rem 2rem !important; }
+        .top-navbar { flex-direction: column; align-items: flex-start; gap: 10px; }
+        .patient-banner { flex-direction: column; align-items: flex-start; gap: 8px; }
     }
     </style>
     """,
@@ -499,135 +426,214 @@ st.markdown(
 )
 
 # =============================================================================
-# VISUAL REFINEMENT: RESTRAINED NEUMORPHISM + MOBILE ADAPTATION
+# TOP HEADER BAR
 # =============================================================================
 st.markdown(
     """
-    <style>
-    :root {
-        --bg: #eef1f4;
-        --ink: #172638;
-        --muted: #647487;
-        --line: #d8dee6;
-        --accent: #0f766e;
-        --accent-bg: #e4f2ef;
-        --shadow-out: 5px 5px 12px rgba(160, 171, 185, .32), -5px -5px 12px rgba(255,255,255,.88);
-        --shadow-in: inset 2px 2px 5px rgba(160,171,185,.25), inset -2px -2px 5px rgba(255,255,255,.82);
-    }
-    html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"] {
-        background: var(--bg) !important;
-        color: var(--ink) !important;
-        font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
-    }
-    [data-testid="stSidebar"] { background: #e9edf1 !important; border-right: 1px solid #dbe1e8; }
-    [data-testid="stSidebar"] > div:first-child { padding-top: 1.35rem; }
-    .block-container { max-width: 1680px !important; padding: 1.4rem clamp(1rem, 2.4vw, 2.4rem) 3rem !important; container-type: inline-size; }
-    [data-testid="stVerticalBlockBorderWrapper"] { border-color: transparent !important; }
-    .st-key-note_pane, .st-key-drawer_pane {
-        background: var(--bg) !important; border: 1px solid rgba(255,255,255,.68) !important;
-        border-radius: 22px !important; padding: clamp(16px, 2vw, 26px) !important;
-        box-shadow: var(--shadow-out) !important;
-    }
-    .st-key-drawer_pane { position: sticky !important; top: 14px !important; max-height: calc(100vh - 28px) !important; overflow-y: auto !important; }
-    .patient-header { align-items: center !important; border: 0 !important; margin: 0 0 1rem !important; padding: 6px 4px 14px !important; }
-    .patient-header .title { font-size: clamp(1.1rem, 1.6vw, 1.4rem) !important; letter-spacing: -.025em !important; }
-    .patient-header .meta { color: var(--muted) !important; line-height: 1.7; }
-    .badge-ok-count, .badge-review-count { padding: 7px 12px !important; border-radius: 999px !important; }
-    .sec-header { color: var(--ink) !important; border-bottom: 1px solid #bfcbd5 !important; margin: 22px 0 11px !important; padding-bottom: 7px !important; letter-spacing: .12em !important; }
-    .field-label { margin: 14px 0 6px !important; font-size: .7rem !important; letter-spacing: .1em !important; color: #536579 !important; }
-    div[class*="claim_row_"] button, div[class*="turn_row_"] button {
-        border-radius: 8px !important; border: 1px solid #d2dbe3 !important;
-        border-left: 1px solid #d2dbe3 !important;
-        background: #ffffff !important; color: var(--ink) !important;
-        box-shadow: 2px 2px 6px rgba(163,174,187,.18) !important;
-        transition: transform .14s ease, border-color .14s ease, background .14s ease !important;
-        white-space: normal !important; word-break: break-word !important; overflow-wrap: break-word !important; height: auto !important;
-    }
-    div[class*="claim_row_"] button p, div[class*="claim_row_"] button div {
-        white-space: normal !important; word-break: break-word !important; overflow-wrap: break-word !important; text-align: left !important;
-    }
-    div[class*="claim_row_"] button { padding: 10px 14px !important; min-height: 44px !important; line-height: 1.55 !important; border: 1px solid #d2dbe3 !important; border-left: 1px solid #d2dbe3 !important; text-align: left !important; justify-content: flex-start !important; }
-    div[class*="claim_row_crit"] button { background: #fff5f5 !important; border: 1px solid #fca5a5 !important; border-left: 1px solid #fca5a5 !important; color: #991b1b !important; }
-    div[class*="claim_row_warn"] button { background: #fffbeb !important; border: 1px solid #fcd34d !important; border-left: 1px solid #fcd34d !important; color: #92400e !important; }
-    div[class*="claim_row_sel"] button { outline: 2px solid #0f766e !important; outline-offset: 2px !important; background: #e3f1ee !important; }
-    div[class*="claim_row_"] button:hover, div[class*="turn_row_"] button:hover { transform: translateY(-1px); box-shadow: 3px 4px 9px rgba(163,174,187,.24) !important; border-color: #0f766e !important; }
-    .dr-title { color: #41566b !important; letter-spacing: .11em !important; padding-bottom: 7px; border-bottom: 1px solid #d3dce4; }
-    .quote-box { background: #e9edf1 !important; border: 1px solid #cbd5e1 !important; border-radius: 8px !important; padding: 13px 15px !important; box-shadow: var(--shadow-in) !important; }
-    .alert-card { border-radius: 8px !important; padding: 13px 15px !important; border: 1px solid transparent !important; }
-    .alert-card.ok { background: #e7f3ed !important; border-color: #b4d4c1 !important; color: #205b3a !important; }
-    .stButton > button, .stDownloadButton > button {
-        min-height: 42px !important; border-radius: 13px !important; border: 1px solid rgba(255,255,255,.85) !important;
-        background: #eef1f4 !important; color: var(--ink) !important; font-weight: 650 !important;
-        box-shadow: 4px 4px 9px rgba(163,174,187,.28), -4px -4px 9px rgba(255,255,255,.84) !important;
-        transition: transform .15s ease, box-shadow .15s ease !important;
-    }
-    .stButton > button:hover, .stDownloadButton > button:hover { transform: translateY(-1px); border-color: #9abdb7 !important; color: #0f625d !important; }
-    button[kind="primary"] { background: #176e67 !important; color: white !important; border-color: #176e67 !important; box-shadow: 3px 4px 9px rgba(23,110,103,.22) !important; }
-    button[kind="primary"]:hover { background: #125c56 !important; color: white !important; }
-    [data-testid="stTextArea"] textarea, [data-testid="stTextInput"] input, [data-testid="stSelectbox"] [role="combobox"] {
-        border: 1px solid #d2dbe3 !important; border-radius: 12px !important; background: #edf0f3 !important;
-        color: var(--ink) !important; box-shadow: var(--shadow-in) !important;
-    }
-    [data-testid="stCheckbox"] label { line-height: 1.55 !important; }
-    [data-testid="stAlert"] { background: #e5f1ef !important; border-color: #a7cbc5 !important; color: #204d49 !important; border-radius: 13px !important; }
-    @container (max-width: 1000px) {
-        [data-testid="stHorizontalBlock"]:has(.st-key-note_pane) { flex-direction: column !important; align-items: stretch !important; }
-        [data-testid="stHorizontalBlock"]:has(.st-key-note_pane) > [data-testid="stColumn"] { flex: 1 1 100% !important; width: 100% !important; min-width: 100% !important; }
-        .st-key-drawer_pane { position: static !important; max-height: none !important; overflow: visible !important; }
-    }
-    .st-key-auth_wrap { max-width: 1040px; margin: clamp(20px, 7vh, 76px) auto; }
-    .st-key-auth_card { padding: clamp(24px, 5vw, 54px); border-radius: 28px; background: #eef1f4; box-shadow: 12px 12px 28px rgba(160,171,185,.34), -12px -12px 28px rgba(255,255,255,.92); border: 1px solid rgba(255,255,255,.75); }
-    .auth-eyebrow { color: #0f766e; font-size: .72rem; font-weight: 750; letter-spacing: .16em; text-transform: uppercase; }
-    .auth-title { color: #172638; font-size: clamp(2rem, 4vw, 3.25rem); line-height: 1.05; letter-spacing: -.045em; font-weight: 760; margin: 14px 0; }
-    .auth-subtitle { color: #536579; font-size: 1rem; line-height: 1.7; max-width: 42rem; }
-    .auth-feature { padding: 14px 16px; border-radius: 14px; margin: 10px 0; color: #31485b; background: #eef1f4; box-shadow: var(--shadow-in); line-height: 1.5; }
-    .auth-note { font-size: .78rem; color: #647487; line-height: 1.6; padding-top: 12px; }
-    @media (max-width: 960px) {
-        .block-container { padding: 1rem .9rem 2rem !important; }
-        [data-testid="stHorizontalBlock"] { flex-wrap: wrap !important; gap: 1rem !important; }
-        [data-testid="stHorizontalBlock"] > [data-testid="column"] { flex: 1 1 100% !important; min-width: 100% !important; }
-        .st-key-drawer_pane { position: static !important; top: auto !important; max-height: none !important; overflow: visible !important; }
-        .patient-header { align-items: flex-start !important; flex-direction: column; gap: 10px; }
-    }
-    @media (max-width: 600px) {
-        [data-testid="stSidebar"] { min-width: 0 !important; }
-        .st-key-note_pane, .st-key-drawer_pane { padding: 14px !important; border-radius: 17px !important; }
-        .stButton > button, .stDownloadButton > button { min-height: 46px !important; }
-        .st-key-auth_wrap { margin: 12px auto; }
-        .st-key-auth_card { border-radius: 20px; }
-        .auth-title { font-size: 2.1rem; }
-    }
-    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: .01ms !important; scroll-behavior: auto !important; } }
-    </style>
+    <div class='top-navbar'>
+        <div>
+            <div class='brand-title'>
+                <span>⚕ Medscribe Local</span>
+                <span class='brand-badge'>Proof Mode</span>
+            </div>
+            <div class='brand-sub'>Offline-First Clinical Documentation Verification · Decision Support Workstation</div>
+        </div>
+        <div class='user-pill'>
+            <span>👨‍⚕️ Dr. Morgan · Attending Physician</span>
+            <span style='color:#0F766E;'>● Local Engine Online</span>
+        </div>
+    </div>
     """,
     unsafe_allow_html=True,
 )
 
-# UI-only demo access gate: no credentials are collected, stored, or validated.
-if not st.session_state.get("local_demo_access", False):
-    st.markdown("<style>[data-testid='stSidebar']{display:none!important}[data-testid='stAppViewContainer']{margin-left:0!important}</style>", unsafe_allow_html=True)
-    with st.container(key="auth_wrap"):
-      with st.container(key="auth_card"):
-        left, right = st.columns([1.25, 1], gap="large")
-        with left:
-            st.markdown("<div class='auth-eyebrow'>Medscribe · Proof Mode</div><div class='auth-title'>A clearer path from conversation to note.</div><div class='auth-subtitle'>Review a locally generated SOAP draft alongside the exact conversation evidence behind it. Built for calm, focused clinician review.</div>", unsafe_allow_html=True)
-            st.markdown("<div style='height:18px'></div>", unsafe_allow_html=True)
-            st.markdown("<div class='auth-feature'><strong>01 · Source-linked</strong><br/>Inspect the cited transcript wording for each statement.</div><div class='auth-feature'><strong>02 · Review-aware</strong><br/>Spot unsupported claims, uncertainty changes, and unassessed fields.</div><div class='auth-feature'><strong>03 · Local-first demo</strong><br/>Synthetic encounters and local adapters; no cloud sign-in is configured.</div>", unsafe_allow_html=True)
-        with right:
-            st.markdown("### Open your local workspace")
-            st.caption("Demo access · no account required")
-            st.info("This prototype does not provide real authentication. Do not enter a password or real patient information.", icon="🔒")
-            clinician_label = st.text_input("Display name (optional)", placeholder="e.g. Dr. Morgan", key="demo_display_name")
-            if st.button("Continue to demo workspace", type="primary", use_container_width=True, key="btn_demo_access"):
-                st.session_state.local_demo_access = True
-                st.session_state.demo_clinician_label = clinician_label.strip()
-                st.rerun()
-            st.markdown("<div class='auth-note'>Medscribe is an experimental documentation prototype, not a diagnostic or treatment system. All built-in cases are fictional. Review every draft before export.</div>", unsafe_allow_html=True)
-    st.stop()
+# =============================================================================
+# ENCOUNTER & WORKSPACE CONTROLS
+# =============================================================================
+with st.container():
+    st.markdown("<div class='source-selector-card'>", unsafe_allow_html=True)
+    c_src, c_eng = st.columns([2.2, 1], gap="medium")
+    
+    with c_src:
+        encounter_tab = st.radio(
+            "Consultation Source",
+            ["📋 Synthetic Presets", "📁 Upload Audio File (.wav, .mp3)", "📝 Custom Dialogue Transcript"],
+            horizontal=True,
+            key="ctl_encounter_mode",
+            label_visibility="collapsed",
+        )
+    with c_eng:
+        engine_options = (
+            ["Local Ollama (Active)", "Deterministic Clinical Adapter", "Adversarial Test Mode"]
+            if ollama_online else ["Deterministic Clinical Adapter", "Adversarial Test Mode"]
+        )
+        selected_engine = st.selectbox(
+            "Inference Mode",
+            engine_options,
+            key="ctl_engine_select",
+            label_visibility="collapsed",
+            help="100% on-device inference for clinical privacy.",
+        )
+        
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# State initialization
+if "draft_note" not in st.session_state:
+    load_preset_encounter(list(FIXTURE_PRESETS.keys())[0], selected_engine)
 
 # =============================================================================
-# CLINICAL AUDIT STATE HELPERS
+# TAB 1: SYNTHETIC PRESETS
 # =============================================================================
+if encounter_tab == "📋 Synthetic Presets":
+    col_p, _ = st.columns([2, 1])
+    with col_p:
+        preset_list = list(FIXTURE_PRESETS.keys())
+        active_preset = st.session_state.get("loaded_preset", preset_list[0])
+        idx = preset_list.index(active_preset) if active_preset in preset_list else 0
+        chosen_preset = st.selectbox(
+            "Select Clinical Encounter Case",
+            preset_list,
+            index=idx,
+            key="ctl_preset_select",
+        )
+        if chosen_preset != st.session_state.get("loaded_preset"):
+            load_preset_encounter(chosen_preset, selected_engine)
+            st.rerun()
+
+# =============================================================================
+# TAB 2: UPLOAD AUDIO FILE (WHISPER LOCAL STT)
+# =============================================================================
+elif encounter_tab == "📁 Upload Audio File (.wav, .mp3)":
+    st.markdown(
+        """
+        <div style='background:#FFFFFF; border:1px solid #E2E8F0; border-radius:8px; padding:18px 20px; margin-bottom:14px;'>
+            <div style='font-size:0.88rem; font-weight:700; color:#0F766E; margin-bottom:4px;'>📁 On-Device Audio Consultation Processor</div>
+            <div style='font-size:0.82rem; color:#64748B; margin-bottom:12px;'>Upload a consultation audio file. Whisper speech-to-text processes audio 100% locally on CPU with zero internet connection or telemetry.</div>
+        """,
+        unsafe_allow_html=True,
+    )
+    
+    col_up, col_opts = st.columns([1.5, 1], gap="medium")
+    with col_up:
+        uploaded_file = st.file_uploader(
+            "Upload Consultation Recording",
+            type=["wav", "mp3", "m4a", "ogg"],
+            key="ctl_file_audio_upload",
+            label_visibility="collapsed",
+        )
+    with col_opts:
+        chosen_lang = st.selectbox(
+            "Audio Language",
+            ["Tagalog (Filipino - tl)", "Taglish / Auto-Detect", "English (en)"],
+            index=0,
+            key="ctl_whisper_lang",
+        )
+        chosen_model = st.selectbox(
+            "Whisper Model Engine",
+            ["Medium (Highest Accuracy · 769M)", "Small (Fast & Accurate · 244M)", "Base (Fast · 140M)"],
+            index=0,
+            key="ctl_whisper_model",
+            help="Medium model provides maximum accuracy and vocabulary for clinical Tagalog and English.",
+        )
+
+    if uploaded_file is not None:
+        audio_bytes = uploaded_file.getvalue()
+        st.audio(audio_bytes)
+        
+        if st.button("🎙️ Transcribe Audio & Generate Audited SOAP Note", type="primary", use_container_width=True, key="btn_run_audio_transcribe"):
+            with st.spinner("Transcribing consultation audio locally via Whisper on CPU..."):
+                lang_code = "tl" if "Tagalog" in chosen_lang else ("en" if "English" in chosen_lang else None)
+                model_code = "medium" if "Medium" in chosen_model else ("small" if "Small" in chosen_model else "base")
+                transcribed_text = transcribe_audio_bytes(audio_bytes, language=lang_code, model_size=model_code)
+                
+                pipeline = MedscribePipeline(adapter=get_adapter(selected_engine))
+                new_transcript = pipeline.parse_raw_text_to_transcript(
+                    transcribed_text,
+                    encounter_id="ENC-UPLOAD-AUDIO",
+                    patient_id="SYN-PAT-UPLOADED"
+                )
+                new_draft = pipeline.process_encounter(new_transcript)
+                
+                st.session_state.active_transcript = new_transcript
+                st.session_state.draft_note = new_draft
+                st.session_state.loaded_preset = "Uploaded Audio Consultation"
+                st.session_state.transcribed_audio_text = transcribed_text
+                
+                def_claim = get_highest_priority_claim(new_draft)
+                st.session_state.selected_claim = def_claim
+                st.session_state.highlighted_seg_ids = list(def_claim.source_segment_ids) if def_claim else []
+                st.success("Audio transcribed and SOAP draft generated!")
+                st.rerun()
+
+    if st.session_state.get("transcribed_audio_text"):
+        st.markdown("<div style='margin-top:14px; font-weight:700; font-size:0.84rem; color:#0F766E;'>📝 Verbatim Dialogue Turns (Editable)</div>", unsafe_allow_html=True)
+        edited_text = st.text_area(
+            "Transcript Turns",
+            value=st.session_state.transcribed_audio_text,
+            height=130,
+            key="area_edit_transcribed",
+            label_visibility="collapsed",
+        )
+        if st.button("🔄 Re-process SOAP Note with Edited Dialogue", type="secondary", key="btn_reprocess_edited_txt", use_container_width=True):
+            pipeline = MedscribePipeline(adapter=get_adapter(selected_engine))
+            new_t = pipeline.parse_raw_text_to_transcript(
+                edited_text,
+                encounter_id="ENC-UPLOAD-AUDIO",
+                patient_id="SYN-PAT-UPLOADED"
+            )
+            new_d = pipeline.process_encounter(new_t)
+            st.session_state.active_transcript = new_t
+            st.session_state.draft_note = new_d
+            st.session_state.transcribed_audio_text = edited_text
+            def_claim = get_highest_priority_claim(new_d)
+            st.session_state.selected_claim = def_claim
+            st.session_state.highlighted_seg_ids = list(def_claim.source_segment_ids) if def_claim else []
+            st.success("SOAP note re-processed with edited dialogue!")
+            st.rerun()
+            
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# =============================================================================
+# TAB 3: CUSTOM DIALOGUE TRANSCRIPT
+# =============================================================================
+elif encounter_tab == "📝 Custom Dialogue Transcript":
+    st.markdown(
+        """
+        <div style='background:#FFFFFF; border:1px solid #E2E8F0; border-radius:8px; padding:18px 20px; margin-bottom:14px;'>
+            <div style='font-size:0.88rem; font-weight:700; color:#0F766E; margin-bottom:4px;'>📝 Custom Consultation Dialogue Generator</div>
+            <div style='font-size:0.82rem; color:#64748B; margin-bottom:12px;'>Paste arbitrary dialogue lines (e.g. <code>Clinician: ... Patient: ...</code>) to test evidence linking on custom text.</div>
+        """,
+        unsafe_allow_html=True,
+    )
+    col_c1, col_c2 = st.columns(2)
+    c_enc = col_c1.text_input("Encounter Identifier", value="ENC-CUSTOM-001", key="in_cu_enc")
+    c_pat = col_c2.text_input("Synthetic Patient Identifier", value="SYN-PAT-CUSTOM", key="in_cu_pat")
+    c_txt = st.text_area(
+        "Consultation Dialogue Turns",
+        height=140,
+        placeholder="Clinician [00:00]: Hello Mr. Cruz, how have you been feeling?\nPatient [00:05]: Masakit po ang ulo ko nitong mga nakaraang araw.",
+        key="in_cu_txt",
+    )
+    if st.button("Generate Audited SOAP Note from Custom Dialogue", type="primary", use_container_width=True, key="btn_gen_custom"):
+        if c_txt.strip():
+            pipeline = MedscribePipeline(adapter=get_adapter(selected_engine))
+            new_t = pipeline.parse_raw_text_to_transcript(c_txt, encounter_id=c_enc, patient_id=c_pat)
+            new_d = pipeline.process_encounter(new_t)
+            st.session_state.active_transcript = new_t
+            st.session_state.draft_note = new_d
+            st.session_state.loaded_preset = "Custom Encounter"
+            def_claim = get_highest_priority_claim(new_d)
+            st.session_state.selected_claim = def_claim
+            st.session_state.highlighted_seg_ids = list(def_claim.source_segment_ids) if def_claim else []
+            st.rerun()
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# Fetch active encounter records
+draft: SOAPNoteDraft = st.session_state.draft_note
+transcript: Transcript = st.session_state.active_transcript
+LINES = line_map(transcript)
+
+# Audit state helpers
 def needs_review(c) -> bool:
     if c.clinician_reviewed:
         return False
@@ -638,19 +644,11 @@ def is_critical(c) -> bool:
             or any(f.severity == AuditFlagSeverity.CRITICAL for f in c.audit_flags))
 
 def edit_key(c) -> str:
-    return f"edit_{c.claim_id}"
+    return f"edit_val_{c.claim_id}"
 
 def select_claim(c):
     st.session_state.selected_claim = c
     st.session_state.highlighted_seg_ids = list(c.source_segment_ids)
-
-def select_claim_from_segment(c, seg_id: str):
-    st.session_state.selected_claim = c
-    st.session_state.highlighted_seg_ids = [seg_id]
-
-def clear_selection():
-    st.session_state.selected_claim = None
-    st.session_state.highlighted_seg_ids = []
 
 def apply_text(c, text: str):
     c.clinician_edited_statement = text.strip() or None
@@ -663,8 +661,12 @@ def save_edit(c):
 def mark_reviewed(c):
     c.clinician_reviewed = True
 
+all_claims = draft.all_claims()
+review_n = sum(1 for c in all_claims if needs_review(c))
+blank_n = len(draft.audit_summary.missing_fields)
+
 def next_item():
-    pending = [c for c in draft.all_claims() if needs_review(c)]
+    pending = [c for c in all_claims if needs_review(c)]
     if not pending:
         return
     cur = st.session_state.selected_claim
@@ -673,206 +675,75 @@ def next_item():
     select_claim(nxt)
     st.session_state.audit_filter = "review"
 
-all_claims = draft.all_claims()
-review_n = sum(1 for c in all_claims if needs_review(c))
-blank_n = len(draft.audit_summary.missing_fields)
+# Auto-select fallback
+if st.session_state.get("selected_claim") is None and all_claims:
+    def_c = get_highest_priority_claim(draft)
+    st.session_state.selected_claim = def_c
+    st.session_state.highlighted_seg_ids = list(def_c.source_segment_ids) if def_c else []
 
 # =============================================================================
-# AUDIO CONSULTATION CAPTURE (LOCAL ON-DEVICE WHISPER)
-# =============================================================================
-is_audio_open = bool(st.session_state.get("audio_expanded", False) or st.session_state.get("loaded_preset") == "Live Audio Consultation")
-with st.expander("🎙️ Capture Live Consultation Audio (Local On-Device Whisper)", expanded=is_audio_open):
-    st.markdown(
-        "<div style='font-size:0.86rem; color:var(--muted); margin-bottom:10px;'>"
-        "Record live dialogue or upload a consultation audio file (.wav, .mp3, .m4a). "
-        "Speech recognition executes <strong>100% locally on-device via Whisper</strong> on CPU with zero internet connection or telemetry."
-        "</div>",
-        unsafe_allow_html=True,
-    )
-    c_lang_col, c_model_col = st.columns([1.2, 1])
-    with c_lang_col:
-        chosen_lang = st.selectbox(
-            "Spoken Language",
-            ["Tagalog (Filipino - tl)", "Tagalog / Taglish / English (Auto-Detect)", "English (en)"],
-            index=0,
-            key="ctl_whisper_lang",
-            help="Multilingual Whisper detects and transcribes Filipino/Tagalog and English accurately.",
-        )
-    with c_model_col:
-        chosen_model = st.selectbox(
-            "Whisper Model Engine",
-            ["Base (Recommended · Fast & Multilingual)", "Small (Higher Accuracy)", "Tiny (Fastest)"],
-            index=0,
-            key="ctl_whisper_model",
-            help="Base and Small models have full Filipino vocabulary and avoid phonetic distortions.",
-        )
-
-    c_aud_rec, c_aud_up = st.columns(2, gap="medium")
-    with c_aud_rec:
-        st.markdown("<div style='font-size:0.82rem; font-weight:700; color:var(--ink); margin-bottom:4px;'>Option A: Microphone Capture</div>", unsafe_allow_html=True)
-        mic_audio = st.audio_input("Record live consultation", key="ctl_mic_audio")
-    with c_aud_up:
-        st.markdown("<div style='font-size:0.82rem; font-weight:700; color:var(--ink); margin-bottom:4px;'>Option B: Upload Audio File</div>", unsafe_allow_html=True)
-        file_audio = st.file_uploader("Upload audio recording", type=["wav", "mp3", "m4a", "ogg"], key="ctl_file_audio")
-
-    active_audio = mic_audio or file_audio
-    active_bytes = b""
-    if active_audio is not None:
-        if hasattr(active_audio, "getvalue"):
-            active_bytes = active_audio.getvalue()
-        else:
-            active_audio.seek(0)
-            active_bytes = active_audio.read()
-
-    import hashlib
-    current_audio_hash = hashlib.md5(active_bytes).hexdigest() if active_bytes else None
-    last_processed_hash = st.session_state.get("last_processed_audio_hash")
-    has_new_audio = bool(current_audio_hash and current_audio_hash != last_processed_hash)
-
-    def run_audio_transcription_and_pipeline(raw_bytes: bytes):
-        lang_code = "tl" if "Tagalog (Filipino" in chosen_lang else ("en" if "English (en)" in chosen_lang else None)
-        model_size_code = "small" if "Small" in chosen_model else ("tiny" if "Tiny" in chosen_model else "base")
-        st_text = transcribe_audio_bytes(raw_bytes, language=lang_code, model_size=model_size_code)
-        pipeline = MedscribePipeline(adapter=get_adapter(selected_engine))
-        new_transcript = pipeline.parse_raw_text_to_transcript(
-            st_text,
-            encounter_id="ENC-LIVE-AUDIO-001",
-            patient_id="SYN-PAT-LIVE"
-        )
-        new_draft = pipeline.process_encounter(new_transcript)
-        st.session_state.active_transcript = new_transcript
-        st.session_state.draft_note = new_draft
-        st.session_state.loaded_preset = "Live Audio Consultation"
-        st.session_state.last_preset_selection = "Live Audio Consultation"
-        st.session_state.transcribed_audio_text = st_text
-        st.session_state.last_processed_audio_hash = hashlib.md5(raw_bytes).hexdigest()
-        st.session_state.audio_expanded = True
-        def_claim = get_highest_priority_claim(new_draft)
-        st.session_state.selected_claim = def_claim
-        st.session_state.highlighted_seg_ids = list(def_claim.source_segment_ids) if def_claim else []
-
-    if active_bytes:
-        st.audio(active_bytes)
-        if has_new_audio:
-            st.info("🎙️ **New audio recording detected!** Click the button below to transcribe and generate your SOAP note.", icon="ℹ️")
-        
-        top_btn_label = "🎙️ Transcribe New Recording & Generate SOAP Note" if has_new_audio else "🔄 Re-Transcribe Audio & Generate SOAP Note"
-        if st.button(top_btn_label, type="primary", key="btn_transcribe_audio", use_container_width=True):
-            with st.spinner("Transcribing consultation audio locally via Whisper (100% on-device)..."):
-                run_audio_transcription_and_pipeline(active_bytes)
-                st.success("Audio transcribed and SOAP note generated successfully!")
-                st.rerun()
-
-    if st.session_state.get("transcribed_audio_text"):
-        st.markdown("---")
-        st.markdown(
-            """
-            <div style='background:#f1f5f9; border:1px solid #cbd5e1; padding:10px 14px; border-radius:6px; margin-bottom:8px;'>
-                <div style='font-weight:750; font-size:0.82rem; color:#0f766e; text-transform:uppercase;'>📝 Whisper On-Device Transcription Output</div>
-                <div style='margin:4px 0 0; font-size:0.82rem; color:#475569;'>Review or correct the dialogue turns below. You can edit any word and re-generate the clinical draft.</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        edited_transcription = st.text_area(
-            "Verbatim Dialogue Turns (Editable)",
-            value=st.session_state.transcribed_audio_text,
-            height=140,
-            key="area_transcribed_audio",
-            help="Review or edit transcript lines. If a new audio is recorded, clicking below will reprocess the new audio.",
-        )
-        
-        reprocess_label = "🔄 Re-process New Audio Recording" if has_new_audio else "🔄 Re-process SOAP Note with Edited Transcription"
-        if st.button(reprocess_label, key="btn_reprocess_audio", type="primary" if has_new_audio else "secondary", use_container_width=True):
-            if has_new_audio and active_bytes:
-                with st.spinner("Transcribing new audio recording locally via Whisper..."):
-                    run_audio_transcription_and_pipeline(active_bytes)
-                    st.success("New audio recording transcribed and SOAP note generated!")
-                    st.rerun()
-            else:
-                pipeline = MedscribePipeline(adapter=get_adapter(selected_engine))
-                new_t = pipeline.parse_raw_text_to_transcript(
-                    edited_transcription,
-                    encounter_id="ENC-LIVE-AUDIO-001",
-                    patient_id="SYN-PAT-LIVE",
-                )
-                new_draft = pipeline.process_encounter(new_t)
-                st.session_state.active_transcript = new_t
-                st.session_state.draft_note = new_draft
-                st.session_state.transcribed_audio_text = edited_transcription
-                def_claim = get_highest_priority_claim(new_draft)
-                st.session_state.selected_claim = def_claim
-                st.session_state.highlighted_seg_ids = list(def_claim.source_segment_ids) if def_claim else []
-                st.success("SOAP note updated from edited transcript!")
-                st.rerun()
-
-# =============================================================================
-# SUMMARY & QUICK AUDIT FILTER BAR
+# PATIENT CONTEXT BANNER & QUICK FILTER BAR
 # =============================================================================
 patient_name = html.escape(patient_display(transcript.patient_synthetic_id))
-if review_n:
-    count_badge = f"<span class='badge-review-count'>{review_n} item{'s' if review_n != 1 else ''} require review</span>"
-else:
-    count_badge = "<span class='badge-ok-count'>✓ All items verified</span>"
+status_badge_html = (
+    f"<span class='status-badge-crit'>🚨 {review_n} Item{'s' if review_n != 1 else ''} Require Review</span>"
+    if review_n > 0 else
+    "<span class='status-badge-ok'>✓ All Items Verified Grounded</span>"
+)
 
 st.markdown(
     f"""
-    <div class='patient-header'>
+    <div class='patient-banner'>
         <div>
-            <span class='title'>{patient_name}</span>
-            <span class='meta'>• Date: {html.escape(transcript.encounter_date)} • ID: {html.escape(transcript.encounter_id)}</span>
+            <span class='patient-name'>{patient_name}</span>
+            <span class='patient-meta'>• Encounter ID: {html.escape(transcript.encounter_id)} • Date: {html.escape(transcript.encounter_date)}</span>
         </div>
         <div>
-            {count_badge}
+            {status_badge_html}
         </div>
     </div>
     """,
     unsafe_allow_html=True,
 )
 
-def set_filter(key: str):
-    st.session_state.audit_filter = key
-
+# Filter Controls
 if "audit_filter" not in st.session_state:
     st.session_state.audit_filter = "all"
 active_filter = st.session_state.audit_filter
 
-FILTERS = {
-    "all": f"All Statements ({len(all_claims)})",
-    "review": f"Needs Review ({review_n})",
-    "unassessed": f"Unassessed ({blank_n})",
-}
+def set_filter(k: str):
+    st.session_state.audit_filter = k
 
-col_f1, col_f2, col_f3, col_f4 = st.columns([1.2, 1.4, 1.4, 1.8], gap="small")
-col_f1.button(
-    FILTERS["all"],
+c_f1, c_f2, c_f3, c_f4 = st.columns([1.2, 1.4, 1.4, 1.8], gap="small")
+c_f1.button(
+    f"All Statements ({len(all_claims)})",
     key="chip_all",
     on_click=set_filter,
     args=("all",),
     use_container_width=True,
     type="primary" if active_filter == "all" else "secondary",
 )
-col_f2.button(
-    FILTERS["review"],
+c_f2.button(
+    f"Needs Review ({review_n})",
     key="chip_review",
     on_click=set_filter,
     args=("review",),
     use_container_width=True,
     type="primary" if active_filter == "review" else "secondary",
 )
-col_f3.button(
-    FILTERS["unassessed"],
+c_f3.button(
+    f"Unassessed Fields ({blank_n})",
     key="chip_unassessed",
     on_click=set_filter,
     args=("unassessed",),
     use_container_width=True,
     type="primary" if active_filter == "unassessed" else "secondary",
 )
-col_f4.button(
-    "Next Item to Review ➔",
+c_f4.button(
+    "Next Flagged Item ➔",
     on_click=next_item,
     disabled=review_n == 0,
-    key="btn_next",
+    key="btn_next_review",
     use_container_width=True,
     type="primary" if review_n > 0 else "secondary",
 )
@@ -880,7 +751,7 @@ col_f4.button(
 st.markdown("<div style='height:8px;'></div>", unsafe_allow_html=True)
 
 # =============================================================================
-# WORKSPACE LAYOUT: PRIMARY SOAP CHART (LEFT) & EVIDENCE DRAWER (RIGHT)
+# WORKSPACE: PRIMARY NOTE CANVAS (LEFT) & EVIDENCE DRAWER (RIGHT)
 # =============================================================================
 col_note, col_drawer = st.columns([1.45, 1.05], gap="large")
 
@@ -906,7 +777,7 @@ SECTIONS = [
     ]),
 ]
 
-def render_claim_row(c):
+def render_claim_card(c):
     sel = st.session_state.selected_claim
     is_sel = sel and sel.claim_id == c.claim_id
     
@@ -917,13 +788,12 @@ def render_claim_row(c):
     sel_type = "sel" if is_sel else "norm"
     container_key = f"claim_row_{status_type}_{sel_type}_{c.claim_id}"
     
-    # Badge and label prefix
     if crit and rev:
-        badge = "🚨 [HIGH PRIORITY] "
+        badge = "🚨 [DISCREPANCY] "
     elif rev:
-        badge = "⚠️ [REVIEW] "
+        badge = "⚠️ [NEEDS REVIEW] "
     elif c.clinician_edited_statement:
-        badge = "✎ [EDITED] "
+        badge = "✎ [MODIFIED] "
     else:
         badge = "✓ "
         
@@ -940,18 +810,19 @@ def render_claim_row(c):
             on_click=select_claim,
             args=(c,),
             use_container_width=True,
-            help="Click to inspect supporting transcript evidence and clinical audit guidance",
+            help="Click to inspect verbatim transcript citation and audit findings",
         )
 
+# Left Column: Primary Clinical Note
 with col_note:
     with st.container(key="note_pane"):
         if active_filter == "unassessed":
-            st.markdown("<div class='sec-header'>Unassessed Clinical Parameters</div>", unsafe_allow_html=True)
+            st.markdown("<div class='soap-sec-title'>Unassessed Clinical Parameters</div>", unsafe_allow_html=True)
             if not draft.audit_summary.missing_fields:
-                st.markdown("<div class='fld-blank-row'>Every standard clinical field was addressed during the encounter.</div>", unsafe_allow_html=True)
+                st.markdown("<div class='fld-blank-notice'>Every standard clinical field was addressed during this encounter.</div>", unsafe_allow_html=True)
             for raw in draft.audit_summary.missing_fields:
                 st.markdown(
-                    f"<div class='fld-blank-row'><strong>{html.escape(unassessed_label(raw))}</strong>: {UNASSESSED_COPY}</div>",
+                    f"<div class='fld-blank-notice'><strong>{html.escape(unassessed_label(raw))}</strong>: {UNASSESSED_COPY}</div>",
                     unsafe_allow_html=True,
                 )
         else:
@@ -964,73 +835,68 @@ with col_note:
                 if active_filter == "review" and not any(cl for _, cl in filtered_fields):
                     continue
                 shown_any = True
-                st.markdown(f"<div class='sec-header'>{sec_title}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='soap-sec-title'>{sec_title}</div>", unsafe_allow_html=True)
                 for f_name, claims in filtered_fields:
                     if active_filter == "review" and not claims:
                         continue
-                    st.markdown(f"<div class='field-label'>{f_name}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='soap-field-title'>{f_name}</div>", unsafe_allow_html=True)
                     if not claims:
                         st.markdown(
-                            f"<div class='fld-blank-row'>— Not assessed in consultation (left unpopulated)</div>",
+                            f"<div class='fld-blank-notice'>— Not assessed in consultation (left unpopulated)</div>",
                             unsafe_allow_html=True,
                         )
                     for c in claims:
-                        render_claim_row(c)
+                        render_claim_card(c)
             if not shown_any:
-                st.markdown("<div class='fld-blank-row'>No items require review in this view.</div>", unsafe_allow_html=True)
+                st.markdown("<div class='fld-blank-notice'>No items require review in this view.</div>", unsafe_allow_html=True)
 
-        st.markdown("<div style='height:16px;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='height:20px;'></div>", unsafe_allow_html=True)
         sign_off = st.checkbox(
-            "I attest that I have reviewed this clinical documentation against the consultation record.",
+            "I attest that I have verified this draft against the consultation record.",
             value=draft.clinician_review_confirmed,
-            key="chk_attest",
+            key="chk_attest_note",
         )
         draft.clinician_review_confirmed = sign_off
         if review_n and sign_off:
-            st.caption(f"Notice: {review_n} statement(s) are still flagged for review and will be exported as documented.")
+            st.caption(f"Notice: {review_n} statement(s) remain flagged and will be exported with audit notice.")
             
         st.download_button(
             "Export Attested Clinical Note (.txt)" if sign_off else "Export Restricted (Review Attestation Required)",
             data=MedscribePipeline().export_note_text(draft),
-            file_name=f"medscribe_{draft.encounter_id}_{'reviewed' if sign_off else 'draft'}.txt",
+            file_name=f"medscribe_{draft.encounter_id}_{'attested' if sign_off else 'draft'}.txt",
             mime="text/plain",
             disabled=not sign_off,
             type="primary" if sign_off else "secondary",
             use_container_width=True,
         )
 
-def edit_height(text: str) -> int:
-    lines = text.count("\n") + 1
-    wrap_lines = max(1, len(text) // 46)
-    total_lines = max(lines, wrap_lines)
-    return max(90, min(320, 24 * total_lines + 36))
-
+# Right Column: Evidence & Resolution Drawer
 with col_drawer:
     with st.container(key="drawer_pane"):
         tab_audit, tab_transcript = st.tabs(["⚡ Evidence & Resolution", "📜 Consultation Transcript"])
+        
         with tab_audit:
             sel = st.session_state.selected_claim
             if sel is None:
-                # Fallback if no claim selected
-                st.markdown("<div class='dr-title'><span>Evidence & Citation Audit</span></div>", unsafe_allow_html=True)
-                st.markdown("<div class='fld-blank-row'>Select any statement row to inspect its transcript citation.</div>", unsafe_allow_html=True)
+                st.markdown("<div class='dr-heading'><span>Evidence & Citation Audit</span></div>", unsafe_allow_html=True)
+                st.markdown("<div class='fld-blank-notice'>Select any statement row to inspect its transcript citation.</div>", unsafe_allow_html=True)
             else:
                 refs = ", ".join(line_label(i, LINES) for i in sel.source_segment_ids) or "No source line"
                 st.markdown(
                     f"""
-                    <div class='dr-title'>
+                    <div class='dr-heading'>
                         <span>Evidence & Citation Audit</span>
-                        <span class='mono' style='font-size:0.75rem; color:#1D4ED8; font-weight:700;'>[{sel.claim_id}] · {refs}</span>
+                        <span style='font-family:monospace; font-size:0.76rem; color:#0F766E; font-weight:700;'>[{sel.claim_id}] · {refs}</span>
                     </div>
                     """,
                     unsafe_allow_html=True,
                 )
                 
-                # Verbatim transcript excerpt
+                # Verbatim excerpt
                 if sel.source_exact_quote:
                     st.markdown(
                         f"""
-                        <div style='font-size:0.72rem; font-weight:700; color:var(--muted); text-transform:uppercase;'>Verbatim Consultation Excerpt:</div>
+                        <div style='font-size:0.74rem; font-weight:700; color:#64748B; text-transform:uppercase;'>Verbatim Consultation Excerpt:</div>
                         <div class='quote-box'>“{html.escape(sel.source_exact_quote)}”</div>
                         """,
                         unsafe_allow_html=True,
@@ -1046,7 +912,7 @@ with col_drawer:
                         unsafe_allow_html=True,
                     )
                     
-                # Audit Guidance & Translation
+                # Audit Guidance Cards
                 if not sel.audit_flags and sel.verification_status == VerificationStatus.SUPPORTED:
                     st.markdown(
                         """
@@ -1065,50 +931,51 @@ with col_drawer:
                         <div class='alert-card {card_cls}'>
                             <div class='card-head'>⚠️ {html.escape(d['title'])}</div>
                             <div style='margin-bottom:4px;'>{html.escape(d['why'])}</div>
-                            <div style='font-size:0.8rem;'><strong>Suggested:</strong> {html.escape(d['prompt'])}</div>
+                            <div style='font-size:0.80rem;'><strong>Suggested Action:</strong> {html.escape(d['prompt'])}</div>
                         </div>
                         """,
                         unsafe_allow_html=True,
                     )
     
-                # Physician Modification Editor
-                st.markdown("<div class='dr-title' style='margin-top:14px;'><span>Physician Override & Resolution</span></div>", unsafe_allow_html=True)
+                # Physician Override Editor
+                st.markdown("<div class='dr-heading' style='margin-top:16px;'><span>Physician Override & Resolution</span></div>", unsafe_allow_html=True)
                 if sel.source_exact_quote and (sel.clinician_edited_statement or sel.statement) != sel.source_exact_quote:
-                    st.caption(f"Suggested transcript wording: “{html.escape(sel.source_exact_quote)}”")
+                    st.caption(f"Suggested verbatim wording: “{html.escape(sel.source_exact_quote)}”")
                     st.button(
                         "Accept Verbatim Transcript Wording",
                         on_click=apply_text,
                         args=(sel, sel.source_exact_quote),
                         type="primary",
-                        key="btn_accept",
+                        key="btn_accept_verbatim",
                         use_container_width=True,
                     )
                     
-                current_val = sel.clinician_edited_statement or sel.statement
+                curr_txt = sel.clinician_edited_statement or sel.statement
                 if edit_key(sel) not in st.session_state:
-                    st.session_state[edit_key(sel)] = current_val
+                    st.session_state[edit_key(sel)] = curr_txt
                     
                 st.text_area(
                     "Statement in Note",
                     key=edit_key(sel),
-                    height=edit_height(st.session_state[edit_key(sel)]),
-                    help="Edit this statement directly without truncation. Click 'Save Edit' to apply.",
+                    height=100,
+                    help="Edit this statement directly without truncation.",
                 )
                 
-                c_b1, c_b2 = st.columns(2)
-                c_b1.button("Save Edit", on_click=save_edit, args=(sel,), key="btn_save", type="primary", use_container_width=True)
-                c_b2.button("Keep As Written", on_click=mark_reviewed, args=(sel,), key="btn_keep", use_container_width=True)
+                col_s1, col_s2 = st.columns(2)
+                col_s1.button("Save Edit", on_click=save_edit, args=(sel,), key="btn_save_edit", type="primary", use_container_width=True)
+                col_s2.button("Keep As Written", on_click=mark_reviewed, args=(sel,), key="btn_keep_written", use_container_width=True)
+
         with tab_transcript:
             st.markdown(
                 f"""
-                <div class='dr-title'>
+                <div class='dr-heading'>
                     <span>Consultation Transcript Record</span>
-                    <span class='mono' style='font-size:0.75rem; color:#1D4ED8; font-weight:700;'>{len(transcript.segments)} Dialogue Turns</span>
+                    <span style='font-family:monospace; font-size:0.76rem; color:#0F766E; font-weight:700;'>{len(transcript.segments)} Spoken Turns</span>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
-            st.caption("Verbatim dialogue turns. Spoken turns cited by the active note statement are highlighted.")
+            st.caption("Verbatim dialogue turns. Turns cited by the active note statement are highlighted.")
             hits = set(st.session_state.highlighted_seg_ids)
             for seg in transcript.segments:
                 s_id = seg.segment_id
@@ -1116,18 +983,18 @@ with col_drawer:
                 spk = seg.speaker.value
                 is_hit = s_id in hits
                 
-                border_clr = "#0f766e" if is_hit else "#cbd5e1"
-                bg_clr = "#e3f1ee" if is_hit else "#f8fafc"
-                badge_html = "<span style='font-size:0.68rem; background:#0f766e; color:#ffffff; padding:2px 7px; border-radius:4px; font-weight:700;'>● CITED IN ACTIVE CLAIM</span>" if is_hit else ""
+                border_clr = "#0F766E" if is_hit else "#E2E8F0"
+                bg_clr = "#F0FDFA" if is_hit else "#FFFFFF"
+                badge_html = "<span style='font-size:0.68rem; background:#0F766E; color:#FFFFFF; padding:2px 7px; border-radius:4px; font-weight:700;'>● CITED IN ACTIVE CLAIM</span>" if is_hit else ""
                 
                 st.markdown(
                     f"""
-                    <div style='padding:9px 13px; margin-bottom:8px; border-radius:8px; border:1px solid {border_clr}; background:{bg_clr}; font-size:0.86rem; line-height:1.5;'>
+                    <div style='padding:10px 14px; margin-bottom:8px; border-radius:6px; border:1px solid {border_clr}; background:{bg_clr}; font-size:0.86rem; line-height:1.5;'>
                         <div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;'>
-                            <span style='font-weight:750; font-size:0.74rem; color:var(--muted); text-transform:uppercase;'>{l_num} · {spk}</span>
+                            <span style='font-weight:750; font-size:0.74rem; color:#64748B; text-transform:uppercase;'>{l_num} · {spk}</span>
                             {badge_html}
                         </div>
-                        <div style='color:var(--ink);'>{html.escape(seg.text)}</div>
+                        <div style='color:#0F172A;'>{html.escape(seg.text)}</div>
                     </div>
                     """,
                     unsafe_allow_html=True,
