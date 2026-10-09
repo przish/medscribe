@@ -689,14 +689,22 @@ with st.expander("🎙️ Capture Live Consultation Audio (Local On-Device Whisp
         "</div>",
         unsafe_allow_html=True,
     )
-    c_lang_col, _ = st.columns([1.2, 1])
+    c_lang_col, c_model_col = st.columns([1.2, 1])
     with c_lang_col:
         chosen_lang = st.selectbox(
             "Spoken Language",
-            ["Tagalog / Taglish / English (Auto-Detect)", "Tagalog (Filipino - tl)", "English (en)"],
+            ["Tagalog (Filipino - tl)", "Tagalog / Taglish / English (Auto-Detect)", "English (en)"],
             index=0,
             key="ctl_whisper_lang",
             help="Multilingual Whisper detects and transcribes Filipino/Tagalog and English accurately.",
+        )
+    with c_model_col:
+        chosen_model = st.selectbox(
+            "Whisper Model Engine",
+            ["Base (Recommended · Fast & Multilingual)", "Small (Higher Accuracy)", "Tiny (Fastest)"],
+            index=0,
+            key="ctl_whisper_model",
+            help="Base and Small models have full Filipino vocabulary and avoid phonetic distortions.",
         )
 
     c_aud_rec, c_aud_up = st.columns(2, gap="medium")
@@ -708,29 +716,51 @@ with st.expander("🎙️ Capture Live Consultation Audio (Local On-Device Whisp
         file_audio = st.file_uploader("Upload audio recording", type=["wav", "mp3", "m4a", "ogg"], key="ctl_file_audio")
 
     active_audio = mic_audio or file_audio
-    if active_audio:
-        st.audio(active_audio)
-        if st.button("Transcribe On-Device & Generate Audited SOAP Note", type="primary", key="btn_transcribe_audio", use_container_width=True):
+    active_bytes = b""
+    if active_audio is not None:
+        if hasattr(active_audio, "getvalue"):
+            active_bytes = active_audio.getvalue()
+        else:
+            active_audio.seek(0)
+            active_bytes = active_audio.read()
+
+    import hashlib
+    current_audio_hash = hashlib.md5(active_bytes).hexdigest() if active_bytes else None
+    last_processed_hash = st.session_state.get("last_processed_audio_hash")
+    has_new_audio = bool(current_audio_hash and current_audio_hash != last_processed_hash)
+
+    def run_audio_transcription_and_pipeline(raw_bytes: bytes):
+        lang_code = "tl" if "Tagalog (Filipino" in chosen_lang else ("en" if "English (en)" in chosen_lang else None)
+        model_size_code = "small" if "Small" in chosen_model else ("tiny" if "Tiny" in chosen_model else "base")
+        st_text = transcribe_audio_bytes(raw_bytes, language=lang_code, model_size=model_size_code)
+        pipeline = MedscribePipeline(adapter=get_adapter(selected_engine))
+        new_transcript = pipeline.parse_raw_text_to_transcript(
+            st_text,
+            encounter_id="ENC-LIVE-AUDIO-001",
+            patient_id="SYN-PAT-LIVE"
+        )
+        new_draft = pipeline.process_encounter(new_transcript)
+        st.session_state.active_transcript = new_transcript
+        st.session_state.draft_note = new_draft
+        st.session_state.loaded_preset = "Live Audio Consultation"
+        st.session_state.last_preset_selection = "Live Audio Consultation"
+        st.session_state.transcribed_audio_text = st_text
+        st.session_state.last_processed_audio_hash = hashlib.md5(raw_bytes).hexdigest()
+        st.session_state.audio_expanded = True
+        def_claim = get_highest_priority_claim(new_draft)
+        st.session_state.selected_claim = def_claim
+        st.session_state.highlighted_seg_ids = list(def_claim.source_segment_ids) if def_claim else []
+
+    if active_bytes:
+        st.audio(active_bytes)
+        if has_new_audio:
+            st.info("🎙️ **New audio recording detected!** Click the button below to transcribe and generate your SOAP note.", icon="ℹ️")
+        
+        top_btn_label = "🎙️ Transcribe New Recording & Generate SOAP Note" if has_new_audio else "🔄 Re-Transcribe Audio & Generate SOAP Note"
+        if st.button(top_btn_label, type="primary", key="btn_transcribe_audio", use_container_width=True):
             with st.spinner("Transcribing consultation audio locally via Whisper (100% on-device)..."):
-                audio_bytes = active_audio.read()
-                lang_code = "tl" if "Tagalog (Filipino" in chosen_lang else ("en" if "English (en)" in chosen_lang else None)
-                st_text = transcribe_audio_bytes(audio_bytes, language=lang_code)
-                pipeline = MedscribePipeline(adapter=get_adapter(selected_engine))
-                new_transcript = pipeline.parse_raw_text_to_transcript(
-                    st_text,
-                    encounter_id="ENC-LIVE-AUDIO-001",
-                    patient_id="SYN-PAT-LIVE"
-                )
-                new_draft = pipeline.process_encounter(new_transcript)
-                st.session_state.active_transcript = new_transcript
-                st.session_state.draft_note = new_draft
-                st.session_state.loaded_preset = "Live Audio Consultation"
-                st.session_state.last_preset_selection = "Live Audio Consultation"
-                st.session_state.transcribed_audio_text = st_text
-                st.session_state.audio_expanded = True
-                def_claim = get_highest_priority_claim(new_draft)
-                st.session_state.selected_claim = def_claim
-                st.session_state.highlighted_seg_ids = list(def_claim.source_segment_ids) if def_claim else []
+                run_audio_transcription_and_pipeline(active_bytes)
+                st.success("Audio transcribed and SOAP note generated successfully!")
                 st.rerun()
 
     if st.session_state.get("transcribed_audio_text"):
@@ -749,24 +779,32 @@ with st.expander("🎙️ Capture Live Consultation Audio (Local On-Device Whisp
             value=st.session_state.transcribed_audio_text,
             height=140,
             key="area_transcribed_audio",
-            help="Edit transcript lines to correct any audio misunderstandings before regenerating the note.",
+            help="Review or edit transcript lines. If a new audio is recorded, clicking below will reprocess the new audio.",
         )
-        if st.button("Re-process SOAP Note with Edited Transcription", key="btn_reprocess_audio", type="secondary", use_container_width=True):
-            pipeline = MedscribePipeline(adapter=get_adapter(selected_engine))
-            new_t = pipeline.parse_raw_text_to_transcript(
-                edited_transcription,
-                encounter_id="ENC-LIVE-AUDIO-001",
-                patient_id="SYN-PAT-LIVE",
-            )
-            new_draft = pipeline.process_encounter(new_t)
-            st.session_state.active_transcript = new_t
-            st.session_state.draft_note = new_draft
-            st.session_state.transcribed_audio_text = edited_transcription
-            def_claim = get_highest_priority_claim(new_draft)
-            st.session_state.selected_claim = def_claim
-            st.session_state.highlighted_seg_ids = list(def_claim.source_segment_ids) if def_claim else []
-            st.success("SOAP note updated from edited transcript!")
-            st.rerun()
+        
+        reprocess_label = "🔄 Re-process New Audio Recording" if has_new_audio else "🔄 Re-process SOAP Note with Edited Transcription"
+        if st.button(reprocess_label, key="btn_reprocess_audio", type="primary" if has_new_audio else "secondary", use_container_width=True):
+            if has_new_audio and active_bytes:
+                with st.spinner("Transcribing new audio recording locally via Whisper..."):
+                    run_audio_transcription_and_pipeline(active_bytes)
+                    st.success("New audio recording transcribed and SOAP note generated!")
+                    st.rerun()
+            else:
+                pipeline = MedscribePipeline(adapter=get_adapter(selected_engine))
+                new_t = pipeline.parse_raw_text_to_transcript(
+                    edited_transcription,
+                    encounter_id="ENC-LIVE-AUDIO-001",
+                    patient_id="SYN-PAT-LIVE",
+                )
+                new_draft = pipeline.process_encounter(new_t)
+                st.session_state.active_transcript = new_t
+                st.session_state.draft_note = new_draft
+                st.session_state.transcribed_audio_text = edited_transcription
+                def_claim = get_highest_priority_claim(new_draft)
+                st.session_state.selected_claim = def_claim
+                st.session_state.highlighted_seg_ids = list(def_claim.source_segment_ids) if def_claim else []
+                st.success("SOAP note updated from edited transcript!")
+                st.rerun()
 
 # =============================================================================
 # SUMMARY & QUICK AUDIT FILTER BAR
