@@ -50,7 +50,7 @@ To run live on-device LLM inference:
 ```bash
 streamlit run app.py
 ```
-Open your browser at `http://localhost:8501`.
+Open your browser at `http://localhost:8501`. The app begins with a local demo-access screen. It is a UI preview only—not authentication: no password is requested, verified, or stored. Use synthetic cases only.
 
 ---
 

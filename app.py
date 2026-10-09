@@ -83,6 +83,10 @@ def load_preset_encounter(preset_name: str, engine_mode: str):
 with st.sidebar:
     st.markdown("### ⚕ Medscribe Workstation")
     st.caption("Offline-first clinical decision support for SOAP documentation verification.")
+    st.caption("Local demo session · not authenticated")
+    if st.button("Lock demo workspace", key="btn_lock_demo", use_container_width=True):
+        st.session_state.local_demo_access = False
+        st.rerun()
     st.markdown("---")
     
     st.markdown("#### Clinical Encounter")
@@ -472,6 +476,128 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+
+# =============================================================================
+# VISUAL REFINEMENT: RESTRAINED NEUMORPHISM + MOBILE ADAPTATION
+# =============================================================================
+st.markdown(
+    """
+    <style>
+    :root {
+        --bg: #eef1f4;
+        --ink: #172638;
+        --muted: #647487;
+        --line: #d8dee6;
+        --accent: #0f766e;
+        --accent-bg: #e4f2ef;
+        --shadow-out: 5px 5px 12px rgba(160, 171, 185, .32), -5px -5px 12px rgba(255,255,255,.88);
+        --shadow-in: inset 2px 2px 5px rgba(160,171,185,.25), inset -2px -2px 5px rgba(255,255,255,.82);
+    }
+    html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"] {
+        background: var(--bg) !important;
+        color: var(--ink) !important;
+        font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+    }
+    [data-testid="stSidebar"] { background: #e9edf1 !important; border-right: 1px solid #dbe1e8; }
+    [data-testid="stSidebar"] > div:first-child { padding-top: 1.35rem; }
+    .block-container { max-width: 1680px !important; padding: 1.4rem clamp(1rem, 2.4vw, 2.4rem) 3rem !important; container-type: inline-size; }
+    [data-testid="stVerticalBlockBorderWrapper"] { border-color: transparent !important; }
+    .st-key-note_pane, .st-key-drawer_pane {
+        background: var(--bg) !important; border: 1px solid rgba(255,255,255,.68) !important;
+        border-radius: 22px !important; padding: clamp(16px, 2vw, 26px) !important;
+        box-shadow: var(--shadow-out) !important;
+    }
+    .st-key-drawer_pane { position: sticky !important; top: 14px !important; max-height: calc(100vh - 28px) !important; overflow-y: auto !important; }
+    .patient-header { align-items: center !important; border: 0 !important; margin: 0 0 1rem !important; padding: 6px 4px 14px !important; }
+    .patient-header .title { font-size: clamp(1.1rem, 1.6vw, 1.4rem) !important; letter-spacing: -.025em !important; }
+    .patient-header .meta { color: var(--muted) !important; line-height: 1.7; }
+    .badge-ok-count, .badge-review-count { padding: 7px 12px !important; border-radius: 999px !important; }
+    .sec-header { color: var(--ink) !important; border-bottom: 1px solid #bfcbd5 !important; margin: 22px 0 11px !important; padding-bottom: 7px !important; letter-spacing: .12em !important; }
+    .field-label { margin: 14px 0 6px !important; font-size: .7rem !important; letter-spacing: .1em !important; color: #536579 !important; }
+    div[class*="claim_row_"] button, div[class*="turn_row_"] button {
+        border-radius: 13px !important; border: 1px solid rgba(255,255,255,.8) !important;
+        background: #eef1f4 !important; color: var(--ink) !important;
+        box-shadow: 3px 3px 8px rgba(163,174,187,.26), -3px -3px 8px rgba(255,255,255,.8) !important;
+        transition: transform .16s ease, box-shadow .16s ease, background .16s ease !important;
+    }
+    div[class*="claim_row_"] button { padding: 10px 14px !important; min-height: 44px !important; line-height: 1.55 !important; border-left: 4px solid #aebbc5 !important; text-align: left !important; justify-content: flex-start !important; }
+    div[class*="claim_row_crit"] button { background: #fff0ed !important; border-left-color: #c24135 !important; color: #6f241f !important; }
+    div[class*="claim_row_warn"] button { background: #fff6e5 !important; border-left-color: #bd7a12 !important; color: #68430d !important; }
+    div[class*="claim_row_sel"] button { outline: 2px solid #0f766e !important; outline-offset: 2px !important; background: #e3f1ee !important; }
+    div[class*="claim_row_"] button:hover, div[class*="turn_row_"] button:hover { transform: translateY(-1px); box-shadow: 4px 5px 11px rgba(163,174,187,.3), -3px -3px 8px rgba(255,255,255,.85) !important; }
+    .dr-title { color: #41566b !important; letter-spacing: .11em !important; padding-bottom: 7px; border-bottom: 1px solid #d3dce4; }
+    .quote-box { background: #e9edf1 !important; border-left: 3px solid #0f766e !important; border-radius: 12px !important; padding: 13px 15px !important; box-shadow: var(--shadow-in) !important; }
+    .alert-card { border-radius: 14px !important; padding: 13px 15px !important; }
+    .alert-card.ok { background: #e7f3ed !important; border-color: #b4d4c1 !important; color: #205b3a !important; }
+    .stButton > button, .stDownloadButton > button {
+        min-height: 42px !important; border-radius: 13px !important; border: 1px solid rgba(255,255,255,.85) !important;
+        background: #eef1f4 !important; color: var(--ink) !important; font-weight: 650 !important;
+        box-shadow: 4px 4px 9px rgba(163,174,187,.28), -4px -4px 9px rgba(255,255,255,.84) !important;
+        transition: transform .15s ease, box-shadow .15s ease !important;
+    }
+    .stButton > button:hover, .stDownloadButton > button:hover { transform: translateY(-1px); border-color: #9abdb7 !important; color: #0f625d !important; }
+    button[kind="primary"] { background: #176e67 !important; color: white !important; border-color: #176e67 !important; box-shadow: 3px 4px 9px rgba(23,110,103,.22) !important; }
+    button[kind="primary"]:hover { background: #125c56 !important; color: white !important; }
+    [data-testid="stTextArea"] textarea, [data-testid="stTextInput"] input, [data-testid="stSelectbox"] [role="combobox"] {
+        border: 1px solid #d2dbe3 !important; border-radius: 12px !important; background: #edf0f3 !important;
+        color: var(--ink) !important; box-shadow: var(--shadow-in) !important;
+    }
+    [data-testid="stCheckbox"] label { line-height: 1.55 !important; }
+    [data-testid="stAlert"] { background: #e5f1ef !important; border-color: #a7cbc5 !important; color: #204d49 !important; border-radius: 13px !important; }
+    @container (max-width: 1000px) {
+        [data-testid="stHorizontalBlock"]:has(.st-key-note_pane) { flex-direction: column !important; align-items: stretch !important; }
+        [data-testid="stHorizontalBlock"]:has(.st-key-note_pane) > [data-testid="stColumn"] { flex: 1 1 100% !important; width: 100% !important; min-width: 100% !important; }
+        .st-key-drawer_pane { position: static !important; max-height: none !important; overflow: visible !important; }
+    }
+    .st-key-auth_wrap { max-width: 1040px; margin: clamp(20px, 7vh, 76px) auto; }
+    .st-key-auth_card { padding: clamp(24px, 5vw, 54px); border-radius: 28px; background: #eef1f4; box-shadow: 12px 12px 28px rgba(160,171,185,.34), -12px -12px 28px rgba(255,255,255,.92); border: 1px solid rgba(255,255,255,.75); }
+    .auth-eyebrow { color: #0f766e; font-size: .72rem; font-weight: 750; letter-spacing: .16em; text-transform: uppercase; }
+    .auth-title { color: #172638; font-size: clamp(2rem, 4vw, 3.25rem); line-height: 1.05; letter-spacing: -.045em; font-weight: 760; margin: 14px 0; }
+    .auth-subtitle { color: #536579; font-size: 1rem; line-height: 1.7; max-width: 42rem; }
+    .auth-feature { padding: 14px 16px; border-radius: 14px; margin: 10px 0; color: #31485b; background: #eef1f4; box-shadow: var(--shadow-in); line-height: 1.5; }
+    .auth-note { font-size: .78rem; color: #647487; line-height: 1.6; padding-top: 12px; }
+    @media (max-width: 960px) {
+        .block-container { padding: 1rem .9rem 2rem !important; }
+        [data-testid="stHorizontalBlock"] { flex-wrap: wrap !important; gap: 1rem !important; }
+        [data-testid="stHorizontalBlock"] > [data-testid="column"] { flex: 1 1 100% !important; min-width: 100% !important; }
+        .st-key-drawer_pane { position: static !important; top: auto !important; max-height: none !important; overflow: visible !important; }
+        .patient-header { align-items: flex-start !important; flex-direction: column; gap: 10px; }
+    }
+    @media (max-width: 600px) {
+        [data-testid="stSidebar"] { min-width: 0 !important; }
+        .st-key-note_pane, .st-key-drawer_pane { padding: 14px !important; border-radius: 17px !important; }
+        .stButton > button, .stDownloadButton > button { min-height: 46px !important; }
+        .st-key-auth_wrap { margin: 12px auto; }
+        .st-key-auth_card { border-radius: 20px; }
+        .auth-title { font-size: 2.1rem; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: .01ms !important; scroll-behavior: auto !important; } }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+# UI-only demo access gate: no credentials are collected, stored, or validated.
+if not st.session_state.get("local_demo_access", False):
+    st.markdown("<style>[data-testid='stSidebar']{display:none!important}[data-testid='stAppViewContainer']{margin-left:0!important}</style>", unsafe_allow_html=True)
+    with st.container(key="auth_wrap"):
+      with st.container(key="auth_card"):
+        left, right = st.columns([1.25, 1], gap="large")
+        with left:
+            st.markdown("<div class='auth-eyebrow'>Medscribe · Proof Mode</div><div class='auth-title'>A clearer path from conversation to note.</div><div class='auth-subtitle'>Review a locally generated SOAP draft alongside the exact conversation evidence behind it. Built for calm, focused clinician review.</div>", unsafe_allow_html=True)
+            st.markdown("<div style='height:18px'></div>", unsafe_allow_html=True)
+            st.markdown("<div class='auth-feature'><strong>01 · Source-linked</strong><br/>Inspect the cited transcript wording for each statement.</div><div class='auth-feature'><strong>02 · Review-aware</strong><br/>Spot unsupported claims, uncertainty changes, and unassessed fields.</div><div class='auth-feature'><strong>03 · Local-first demo</strong><br/>Synthetic encounters and local adapters; no cloud sign-in is configured.</div>", unsafe_allow_html=True)
+        with right:
+            st.markdown("### Open your local workspace")
+            st.caption("Demo access · no account required")
+            st.info("This prototype does not provide real authentication. Do not enter a password or real patient information.", icon="🔒")
+            clinician_label = st.text_input("Display name (optional)", placeholder="e.g. Dr. Morgan", key="demo_display_name")
+            if st.button("Continue to demo workspace", type="primary", use_container_width=True, key="btn_demo_access"):
+                st.session_state.local_demo_access = True
+                st.session_state.demo_clinician_label = clinician_label.strip()
+                st.rerun()
+            st.markdown("<div class='auth-note'>Medscribe is an experimental documentation prototype, not a diagnostic or treatment system. All built-in cases are fictional. Review every draft before export.</div>", unsafe_allow_html=True)
+    st.stop()
 
 # =============================================================================
 # CLINICAL AUDIT STATE HELPERS

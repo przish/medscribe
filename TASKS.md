@@ -17,10 +17,10 @@ Status legend: `[ ]` not started · `[-]` in progress · `[x]` verified complete
 ## P1 — Only after P0 works
 - [ ] Add optional local speech-to-text input (e.g. whisper.cpp).
 - [x] Improve evidence highlighting and claim navigation. (Verified: restrained neumorphic proof mode, active claim halo, quote preview, and inline editing).
-- [x] Desktop-first review workspace replaces mobile simulator (see DECISIONS 2026-10-10). Verified by headless AppTest + 15 pytest tests; not yet visually inspected in a browser.
+- [x] User-requested responsive neumorphic refresh supersedes the prior desktop-only direction (see DECISIONS 2026-10-10). Verified: 15 pytest tests, AppTest access/workspace flow, and sandbox browser preview at tablet content width.
 - [ ] Create one-minute demo video and submission disclosures.
 
 ## Explicitly defer unless the user asks
-- [ ] EHR integrations, authentication, cloud sync, remote LLM use, production deployment.
+- [ ] Real authentication/account management, EHR integrations, cloud sync, remote LLM use, production deployment. (A UI-only demo access screen is present; it provides no security.)
 - [ ] Diagnosis/treatment recommendations.
 - [ ] Real patient data or claims of clinical validation.

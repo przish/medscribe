@@ -32,7 +32,8 @@ AI-generated clinical notes can sound polished while omitting details, changing 
 
 ## Out of scope for first demo
 - Autonomous diagnosis or treatment recommendations.
-- EHR integration, accounts, cloud sync, remote inference, production deployment, or real patient records.
+- Real authentication, account management, cloud sync, remote inference, production deployment, or real patient records.
+- The UI may show a clearly disclosed local demo-access screen, but it does not verify, store, or imply secure credentials.
 - Claims of medical-device approval, legal compliance, clinical validation, or time saved without evidence.
 - Live ambient recording, diarization, or perfect Taglish transcription unless the basic transcript workflow is already reliable.
 

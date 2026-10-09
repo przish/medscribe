@@ -37,3 +37,10 @@ Use newest-first entries. The user owns product direction; when a new user promp
 - **Sidebar Relocation:** Encounter switching, local inference engine selection, and custom synthetic consultation generation were relocated into `st.sidebar`, keeping the main dual-pane canvas strictly dedicated to clinical review.
 - **Bidirectional Linking:** Clicking a SOAP entry focuses its source transcript turns; clicking a transcript turn immediately focuses its linked SOAP statement in the chart.
 - **Visual Rhythm:** Muted and tightened unassessed parameters (`fld-blank-row`) so clinicians can scan past negative observations without distraction. Auto-expanding textareas prevent diagnosis truncation.
+
+
+## 2026-10-10 — User-requested responsive neumorphic refresh and demo access screen
+- **Visual direction:** Latest user instruction supersedes the earlier flat desktop-only choice: use a restrained, professional neumorphic system with a warm cool-gray canvas, soft raised/recessed surfaces, deep slate typography, and teal interaction accents. Amber/red remain reserved for review states.
+- **Responsive behavior:** Keep the SOAP/evidence workflow side-by-side on wide screens and stack it on tablet/mobile; remove sticky/max-height drawer behavior on narrow screens and use touch-sized controls.
+- **Access screen:** Add an illustrative local demo entry page with optional display name and a lock/continue flow. This is UI-only, collects no password, performs no identity validation, and must disclose that real authentication is not configured. No account/security backend is added.
+- **Scope:** Preserve inference, validation, clinical wording, export gating, and evidence-linking behavior.
