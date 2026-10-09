@@ -116,7 +116,7 @@ st.markdown(
        - NEVER carved (zero inset shadows)
        - Smooth pillowy rounded corners (16px to 24px)
        - NO side stripes on cards
-       - Systematic, tight, consistent spacing rhythm (King-Julyan frontend design)
+       - Complete eradication of sidebar and header clutter
     */
     :root {
         --bg: #eef1f5;
@@ -139,30 +139,47 @@ st.markdown(
         -webkit-font-smoothing: antialiased;
     }
     
-    [data-testid="stSidebar"] {
-        background: #e8ecf2 !important;
-        border-right: 1px solid rgba(255, 255, 255, 0.6) !important;
+    /* COMPLETE ERADICATION OF SIDEBAR & STREAMLIT HEADER CLUTTER */
+    header[data-testid="stHeader"],
+    [data-testid="stHeader"],
+    [data-testid="stSidebar"],
+    [data-testid="stSidebarCollapsedControl"],
+    [data-testid="stSidebarNav"],
+    footer,
+    #MainMenu {
+        display: none !important;
+        height: 0 !important;
+        width: 0 !important;
+        visibility: hidden !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }
-    [data-testid="stSidebar"] > div:first-child {
-        padding-top: 1.2rem;
+
+    [data-testid="stAppViewContainer"] {
+        margin-left: 0 !important;
+        padding-left: 0 !important;
     }
     
     .block-container {
-        max-width: 1680px !important;
-        padding: 1.0rem clamp(1rem, 2.2vw, 2.2rem) 2.5rem !important;
+        max-width: 1560px !important;
+        padding-top: 1.4rem !important;
+        padding-bottom: 2.5rem !important;
+        padding-left: clamp(1rem, 2.4vw, 2.6rem) !important;
+        padding-right: clamp(1rem, 2.4vw, 2.6rem) !important;
+        margin: 0 auto !important;
     }
 
-    /* TOP NAVIGATION BAR */
+    /* SLEEK ELEVATED TOP NAVIGATION BAR */
     .medscribe-navbar {
         display: flex;
         justify-content: space-between;
         align-items: center;
         background: var(--bg);
-        border-radius: 20px;
-        padding: 12px 20px;
-        margin-bottom: 14px;
+        border-radius: 22px;
+        padding: 12px 22px;
+        margin-bottom: 16px;
         box-shadow: var(--elevated-card);
-        border: 1px solid rgba(255, 255, 255, 0.85);
+        border: 1px solid rgba(255, 255, 255, 0.9);
     }
     .nav-left {
         display: flex;
@@ -173,72 +190,55 @@ st.markdown(
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 44px;
-        height: 44px;
-        border-radius: 14px;
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
         background: var(--bg);
         box-shadow: var(--elevated-pill);
-        border: 1px solid rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.95);
     }
-    .nav-title-group {
+    .nav-brand-group {
         display: flex;
-        align-items: baseline;
-        gap: 8px;
+        align-items: center;
+        gap: 10px;
     }
     .nav-brand-title {
         font-size: 1.25rem;
-        font-weight: 850;
-        letter-spacing: -0.03em;
-        color: #134e4a;
+        font-weight: 800;
+        letter-spacing: -0.025em;
+        color: var(--ink);
     }
     .nav-brand-tag {
-        font-size: 0.68rem;
+        font-size: 0.66rem;
         font-weight: 750;
         letter-spacing: 0.12em;
         text-transform: uppercase;
         color: #0f766e;
         background: #e1f1ee;
-        padding: 3px 8px;
-        border-radius: 999px;
-        box-shadow: var(--elevated-pill);
-        border: 1px solid rgba(255, 255, 255, 0.8);
-    }
-    .nav-center {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-    .nav-status-pill {
-        font-size: 0.74rem;
-        font-weight: 650;
-        color: var(--muted);
-        background: var(--bg);
-        padding: 6px 14px;
+        padding: 3px 9px;
         border-radius: 999px;
         box-shadow: var(--elevated-pill);
         border: 1px solid rgba(255, 255, 255, 0.85);
     }
-    .nav-right {
+    .nav-status-group {
         display: flex;
         align-items: center;
         gap: 10px;
-    }
-    .nav-user-pill {
-        display: flex;
-        align-items: center;
-        gap: 8px;
         background: var(--bg);
-        padding: 6px 14px;
+        padding: 7px 18px;
         border-radius: 999px;
         box-shadow: var(--elevated-pill);
-        border: 1px solid rgba(255, 255, 255, 0.85);
+        border: 1px solid rgba(255, 255, 255, 0.88);
         font-size: 0.78rem;
-        font-weight: 700;
-        color: var(--ink);
+        color: var(--muted);
+        font-weight: 600;
     }
-    .user-avatar {
-        color: #0f766e;
-        font-weight: 800;
+    .status-pill-sep {
+        color: rgba(160, 172, 188, 0.6);
+    }
+    .status-pill-item.clinician {
+        color: var(--ink);
+        font-weight: 700;
     }
 
     /* CONSULTATION SOURCE WORKSTATION */
@@ -246,15 +246,15 @@ st.markdown(
         background: var(--bg) !important;
         border: 1px solid rgba(255, 255, 255, 0.85) !important;
         border-radius: 22px !important;
-        padding: 16px 20px 14px !important;
+        padding: 18px 22px 16px !important;
         box-shadow: var(--elevated-card) !important;
-        margin-bottom: 14px !important;
+        margin-bottom: 16px !important;
     }
     .source-panel-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 10px;
+        margin-bottom: 12px;
     }
     .source-panel-title {
         font-size: 0.76rem;
@@ -267,6 +267,16 @@ st.markdown(
         font-size: 0.74rem;
         color: var(--muted);
     }
+
+    [data-testid="stFileUploaderDropzone"] {
+        background: var(--bg) !important;
+        border: 1.5px dashed rgba(160, 172, 188, 0.45) !important;
+        border-radius: 16px !important;
+        box-shadow: var(--elevated-pill) !important;
+    }
+    [data-testid="stFileUploaderDropzone"]:hover {
+        border-color: #0f766e !important;
+    }
     
     /* MAIN ELEVATED CONTAINERS */
     .st-key-note_pane, .st-key-drawer_pane {
@@ -278,8 +288,8 @@ st.markdown(
     }
     .st-key-drawer_pane {
         position: sticky !important;
-        top: 12px !important;
-        max-height: calc(100vh - 24px) !important;
+        top: 14px !important;
+        max-height: calc(100vh - 28px) !important;
         overflow-y: auto !important;
     }
     
@@ -298,12 +308,12 @@ st.markdown(
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin: 0 0 12px 0;
-        padding: 12px 20px;
+        margin: 0 0 14px 0;
+        padding: 13px 22px;
         background: var(--bg);
         border-radius: 20px;
         box-shadow: var(--elevated-pill);
-        border: 1px solid rgba(255, 255, 255, 0.85);
+        border: 1px solid rgba(255, 255, 255, 0.88);
     }
     .patient-header .title {
         font-size: clamp(1.1rem, 1.5vw, 1.35rem);
@@ -456,30 +466,32 @@ st.markdown(
 
     /* Streamlit Tabs Styled as Elevated Switch Pills */
     [data-testid="stTabs"] [data-baseweb="tab-list"] {
-        gap: 10px !important;
+        gap: 12px !important;
         background: transparent !important;
         border-bottom: none !important;
-        padding: 2px 0 12px 0 !important;
+        padding: 4px 0 14px 0 !important;
     }
     [data-testid="stTabs"] [data-baseweb="tab"] {
         border-radius: 999px !important;
-        padding: 7px 18px !important;
+        padding: 8px 20px !important;
         background: var(--bg) !important;
         box-shadow: var(--elevated-pill) !important;
-        border: 1px solid rgba(255, 255, 255, 0.85) !important;
+        border: 1px solid rgba(255, 255, 255, 0.9) !important;
         color: var(--muted) !important;
         font-weight: 650 !important;
-        font-size: 0.80rem !important;
+        font-size: 0.82rem !important;
         transition: all 0.14s ease !important;
     }
     [data-testid="stTabs"] [data-baseweb="tab"]:hover {
         transform: translateY(-1px) !important;
         box-shadow: var(--elevated-hover) !important;
+        color: #0f766e !important;
     }
     [data-testid="stTabs"] [data-baseweb="tab"][aria-selected="true"] {
         color: #0f766e !important;
-        border-color: #0f766e !important;
+        border-color: rgba(15, 118, 110, 0.3) !important;
         background: #e1f1ee !important;
+        font-weight: 750 !important;
     }
     [data-testid="stTabs"] [data-baseweb="tab-highlight"],
     [data-testid="stTabs"] [data-baseweb="tab-border"] {
@@ -528,6 +540,19 @@ st.markdown(
         line-height: 1.5 !important;
         font-size: 0.86rem !important;
     }
+
+    /* FOOTER */
+    .medscribe-footer {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 12px;
+        font-size: 0.74rem;
+        color: var(--muted);
+        margin-top: 24px;
+        padding-top: 14px;
+        border-top: 1px solid rgba(160, 172, 188, 0.2);
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -542,28 +567,23 @@ navbar_html = f"""
 <div class='medscribe-navbar'>
     <div class='nav-left'>
         <div class='nav-logo-badge'>
-            <svg width="34" height="34" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect width="38" height="38" rx="10" fill="#eef1f5"/>
-              <circle cx="19" cy="19" r="15" fill="#e1f1ee" stroke="#0f766e" stroke-width="1.2"/>
-              <path d="M16 11h6v5h5v6h-5v5h-6v-5h-5v-6h5v-5z" fill="#0f766e" fill-opacity="0.18"/>
-              <path d="M8 19h5l2.2-4.5 3.6 9 3.2-6.5 1.8 2H30" stroke="#0f766e" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+            <svg width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="32" height="32" rx="9" fill="#e1f1ee"/>
+              <path d="M13 7h6v6h6v6h-6v6h-6v-6H7v-6h6V7z" fill="#0f766e" fill-opacity="0.22"/>
+              <path d="M5 16h6l2-4 3 8 2.5-6 1.5 2H27" stroke="#0f766e" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
         </div>
-        <div class='nav-title-group'>
-            <span class='nav-brand-title'>MEDSCRIBE</span>
+        <div class='nav-brand-group'>
+            <span class='nav-brand-title'>Medscribe</span>
             <span class='nav-brand-tag'>PROOF MODE</span>
         </div>
     </div>
-    <div class='nav-center'>
-        <div class='nav-status-pill'>🛡️ 100% Offline Privacy</div>
-        <div class='nav-status-pill'>⚡ Whisper Medium (769M)</div>
-        <div class='nav-status-pill'>🔬 {html.escape(current_engine_name)}</div>
-    </div>
-    <div class='nav-right'>
-        <div class='nav-user-pill'>
-            <span class='user-avatar'>⚕</span>
-            <span class='user-name'>Dr. Morgan · Attending Clinician</span>
-        </div>
+    <div class='nav-status-group'>
+        <span class='status-pill-item'>🛡️ 100% Offline</span>
+        <span class='status-pill-sep'>•</span>
+        <span class='status-pill-item'>⚡ Whisper Medium</span>
+        <span class='status-pill-sep'>•</span>
+        <span class='status-pill-item clinician'>⚕ Dr. Morgan (Attending)</span>
     </div>
 </div>
 """
@@ -689,17 +709,6 @@ with st.container(key="source_workspace"):
                     st.session_state.selected_claim = def_claim
                     st.session_state.highlighted_seg_ids = list(def_claim.source_segment_ids) if def_claim else []
                     st.rerun()
-
-# Sidebar: System Diagnostics & Safety Disclosures
-with st.sidebar:
-    st.markdown("### ⚕ Medscribe Workstation")
-    st.caption("Offline-first clinical decision support for SOAP documentation verification.")
-    st.markdown("---")
-    st.markdown("#### System Diagnostics")
-    st.markdown("• **Execution Mode:** 100% On-Device CPU\n• **Network Dependency:** Zero External Calls\n• **Speech Recognition:** Whisper Medium (769M)\n• **Clinical Audit Rules:** Active")
-    st.markdown("---")
-    st.markdown("#### Clinical Safety Notice")
-    st.caption("Medscribe is decision-support for documentation verification, not a diagnostic or treatment system. All clinical notes must be verified and attested by a licensed clinician before export.")
 
 draft: SOAPNoteDraft = st.session_state.draft_note
 transcript: Transcript = st.session_state.active_transcript
@@ -1078,3 +1087,15 @@ with col_drawer:
                     """,
                     unsafe_allow_html=True,
                 )
+
+# Subtle footer
+st.markdown(
+    """
+    <div class='medscribe-footer'>
+        <span>⚕ Medscribe Local: Proof Mode · 100% On-Device CPU Inference · Zero Cloud API Dependencies</span>
+        <span>•</span>
+        <span>Clinical documentation decision support · Clinician verification required before export</span>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
