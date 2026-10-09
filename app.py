@@ -72,6 +72,8 @@ def load_preset_encounter(preset_name: str, engine_mode: str):
     st.session_state.draft_note = draft
     st.session_state.loaded_preset = preset_name
     st.session_state.loaded_engine = engine_mode
+    st.session_state.audio_expanded = False
+    st.session_state.transcribed_audio_text = None
     
     # Auto-initialize right-hand pane with highest-priority flagged item
     def_claim = get_highest_priority_claim(draft)
@@ -155,9 +157,12 @@ engine_changed = (st.session_state.get("loaded_engine") != selected_engine
 if preset_changed:
     st.session_state.last_preset_selection = selected_preset
     load_preset_encounter(selected_preset, selected_engine)
-elif engine_changed or "draft_note" not in st.session_state:
+elif engine_changed:
     if selected_preset in FIXTURE_PRESETS:
         load_preset_encounter(selected_preset, selected_engine)
+elif "draft_note" not in st.session_state:
+    fallback = selected_preset if selected_preset in FIXTURE_PRESETS else list(FIXTURE_PRESETS.keys())[0]
+    load_preset_encounter(fallback, selected_engine)
 
 draft: SOAPNoteDraft = st.session_state.draft_note
 transcript: Transcript = st.session_state.active_transcript
@@ -660,7 +665,8 @@ blank_n = len(draft.audit_summary.missing_fields)
 # =============================================================================
 # AUDIO CONSULTATION CAPTURE (LOCAL ON-DEVICE WHISPER)
 # =============================================================================
-with st.expander("🎙️ Capture Live Consultation Audio (Local On-Device Whisper)", expanded=False):
+is_audio_open = bool(st.session_state.get("audio_expanded", False) or st.session_state.get("loaded_preset") == "Live Audio Consultation")
+with st.expander("🎙️ Capture Live Consultation Audio (Local On-Device Whisper)", expanded=is_audio_open):
     st.markdown(
         "<div style='font-size:0.86rem; color:var(--muted); margin-bottom:10px;'>"
         "Record live dialogue or upload a consultation audio file (.wav, .mp3, .m4a). "
@@ -694,11 +700,47 @@ with st.expander("🎙️ Capture Live Consultation Audio (Local On-Device Whisp
                 st.session_state.draft_note = new_draft
                 st.session_state.loaded_preset = "Live Audio Consultation"
                 st.session_state.last_preset_selection = "Live Audio Consultation"
+                st.session_state.transcribed_audio_text = st_text
+                st.session_state.audio_expanded = True
                 def_claim = get_highest_priority_claim(new_draft)
                 st.session_state.selected_claim = def_claim
                 st.session_state.highlighted_seg_ids = list(def_claim.source_segment_ids) if def_claim else []
-                st.success("Transcribed and verified on-device!")
                 st.rerun()
+
+    if st.session_state.get("transcribed_audio_text"):
+        st.markdown("---")
+        st.markdown(
+            """
+            <div style='background:#f1f5f9; border-left:4px solid #0f766e; padding:10px 14px; border-radius:6px; margin-bottom:8px;'>
+                <div style='font-weight:750; font-size:0.82rem; color:#0f766e; text-transform:uppercase;'>📝 Whisper On-Device Transcription Output</div>
+                <div style='margin:4px 0 0; font-size:0.82rem; color:#475569;'>Review or correct the dialogue turns below. You can edit any word and re-generate the clinical draft.</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        edited_transcription = st.text_area(
+            "Verbatim Dialogue Turns (Editable)",
+            value=st.session_state.transcribed_audio_text,
+            height=140,
+            key="area_transcribed_audio",
+            help="Edit transcript lines to correct any audio misunderstandings before regenerating the note.",
+        )
+        if st.button("Re-process SOAP Note with Edited Transcription", key="btn_reprocess_audio", type="secondary", use_container_width=True):
+            pipeline = MedscribePipeline(adapter=get_adapter(selected_engine))
+            new_t = pipeline.parse_raw_text_to_transcript(
+                edited_transcription,
+                encounter_id="ENC-LIVE-AUDIO-001",
+                patient_id="SYN-PAT-LIVE",
+            )
+            new_draft = pipeline.process_encounter(new_t)
+            st.session_state.active_transcript = new_t
+            st.session_state.draft_note = new_draft
+            st.session_state.transcribed_audio_text = edited_transcription
+            def_claim = get_highest_priority_claim(new_draft)
+            st.session_state.selected_claim = def_claim
+            st.session_state.highlighted_seg_ids = list(def_claim.source_segment_ids) if def_claim else []
+            st.success("SOAP note updated from edited transcript!")
+            st.rerun()
 
 # =============================================================================
 # SUMMARY & QUICK AUDIT FILTER BAR
@@ -901,92 +943,128 @@ def edit_height(text: str) -> int:
 
 with col_drawer:
     with st.container(key="drawer_pane"):
-        sel = st.session_state.selected_claim
-        if sel is None:
-            # Fallback if no claim selected
-            st.markdown("<div class='dr-title'><span>Evidence & Citation Audit</span></div>", unsafe_allow_html=True)
-            st.markdown("<div class='fld-blank-row'>Select any statement row to inspect its transcript citation.</div>", unsafe_allow_html=True)
-        else:
-            refs = ", ".join(line_label(i, LINES) for i in sel.source_segment_ids) or "No source line"
+        tab_audit, tab_transcript = st.tabs(["⚡ Evidence & Resolution", "📜 Consultation Transcript"])
+        with tab_audit:
+            sel = st.session_state.selected_claim
+            if sel is None:
+                # Fallback if no claim selected
+                st.markdown("<div class='dr-title'><span>Evidence & Citation Audit</span></div>", unsafe_allow_html=True)
+                st.markdown("<div class='fld-blank-row'>Select any statement row to inspect its transcript citation.</div>", unsafe_allow_html=True)
+            else:
+                refs = ", ".join(line_label(i, LINES) for i in sel.source_segment_ids) or "No source line"
+                st.markdown(
+                    f"""
+                    <div class='dr-title'>
+                        <span>Evidence & Citation Audit</span>
+                        <span class='mono' style='font-size:0.75rem; color:#1D4ED8; font-weight:700;'>[{sel.claim_id}] · {refs}</span>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+                
+                # Verbatim transcript excerpt
+                if sel.source_exact_quote:
+                    st.markdown(
+                        f"""
+                        <div style='font-size:0.72rem; font-weight:700; color:var(--muted); text-transform:uppercase;'>Verbatim Consultation Excerpt:</div>
+                        <div class='quote-box'>“{html.escape(sel.source_exact_quote)}”</div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    st.markdown(
+                        """
+                        <div class='alert-card crit'>
+                            <div class='card-head'>⚠️ No Supporting Transcript Excerpt</div>
+                            <div>This claim was generated without an explicit verbatim consultation excerpt.</div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                    
+                # Audit Guidance & Translation
+                if not sel.audit_flags and sel.verification_status == VerificationStatus.SUPPORTED:
+                    st.markdown(
+                        """
+                        <div class='alert-card ok'>
+                            <div class='card-head'>✓ Verified Grounded Statement</div>
+                            <div>This statement is supported by the cited consultation turn. Verify clinical relevance.</div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                for fl in sel.audit_flags:
+                    d = describe_flag(fl, sel, LINES)
+                    card_cls = "crit" if fl.severity == AuditFlagSeverity.CRITICAL else "warn"
+                    st.markdown(
+                        f"""
+                        <div class='alert-card {card_cls}'>
+                            <div class='card-head'>⚠️ {html.escape(d['title'])}</div>
+                            <div style='margin-bottom:4px;'>{html.escape(d['why'])}</div>
+                            <div style='font-size:0.8rem;'><strong>Suggested:</strong> {html.escape(d['prompt'])}</div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+    
+                # Physician Modification Editor
+                st.markdown("<div class='dr-title' style='margin-top:14px;'><span>Physician Override & Resolution</span></div>", unsafe_allow_html=True)
+                if sel.source_exact_quote and (sel.clinician_edited_statement or sel.statement) != sel.source_exact_quote:
+                    st.caption(f"Suggested transcript wording: “{html.escape(sel.source_exact_quote)}”")
+                    st.button(
+                        "Accept Verbatim Transcript Wording",
+                        on_click=apply_text,
+                        args=(sel, sel.source_exact_quote),
+                        type="primary",
+                        key="btn_accept",
+                        use_container_width=True,
+                    )
+                    
+                current_val = sel.clinician_edited_statement or sel.statement
+                if edit_key(sel) not in st.session_state:
+                    st.session_state[edit_key(sel)] = current_val
+                    
+                st.text_area(
+                    "Statement in Note",
+                    key=edit_key(sel),
+                    height=edit_height(st.session_state[edit_key(sel)]),
+                    help="Edit this statement directly without truncation. Click 'Save Edit' to apply.",
+                )
+                
+                c_b1, c_b2 = st.columns(2)
+                c_b1.button("Save Edit", on_click=save_edit, args=(sel,), key="btn_save", type="primary", use_container_width=True)
+                c_b2.button("Keep As Written", on_click=mark_reviewed, args=(sel,), key="btn_keep", use_container_width=True)
+        with tab_transcript:
             st.markdown(
                 f"""
                 <div class='dr-title'>
-                    <span>Evidence & Citation Audit</span>
-                    <span class='mono' style='font-size:0.75rem; color:#1D4ED8; font-weight:700;'>[{sel.claim_id}] · {refs}</span>
+                    <span>Consultation Transcript Record</span>
+                    <span class='mono' style='font-size:0.75rem; color:#1D4ED8; font-weight:700;'>{len(transcript.segments)} Dialogue Turns</span>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
-            
-            # Verbatim transcript excerpt
-            if sel.source_exact_quote:
+            st.caption("Verbatim dialogue turns. Spoken turns cited by the active note statement are highlighted.")
+            hits = set(st.session_state.highlighted_seg_ids)
+            for seg in transcript.segments:
+                s_id = seg.segment_id
+                l_num = line_label(s_id, LINES)
+                spk = seg.speaker.value
+                is_hit = s_id in hits
+                
+                border_clr = "#0f766e" if is_hit else "#cbd5e1"
+                bg_clr = "#e3f1ee" if is_hit else "#f8fafc"
+                badge_html = "<span style='font-size:0.68rem; background:#0f766e; color:#ffffff; padding:2px 7px; border-radius:4px; font-weight:700;'>● CITED IN ACTIVE CLAIM</span>" if is_hit else ""
+                
                 st.markdown(
                     f"""
-                    <div style='font-size:0.72rem; font-weight:700; color:var(--muted); text-transform:uppercase;'>Verbatim Consultation Excerpt:</div>
-                    <div class='quote-box'>“{html.escape(sel.source_exact_quote)}”</div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-            else:
-                st.markdown(
-                    """
-                    <div class='alert-card crit'>
-                        <div class='card-head'>⚠️ No Supporting Transcript Excerpt</div>
-                        <div>This claim was generated without an explicit verbatim consultation excerpt.</div>
+                    <div style='padding:9px 13px; margin-bottom:8px; border-radius:8px; border:1px solid #dbe1e8; border-left:4px solid {border_clr}; background:{bg_clr}; font-size:0.86rem; line-height:1.5;'>
+                        <div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;'>
+                            <span style='font-weight:750; font-size:0.74rem; color:var(--muted); text-transform:uppercase;'>{l_num} · {spk}</span>
+                            {badge_html}
+                        </div>
+                        <div style='color:var(--ink);'>{html.escape(seg.text)}</div>
                     </div>
                     """,
                     unsafe_allow_html=True,
                 )
-                
-            # Audit Guidance & Translation
-            if not sel.audit_flags and sel.verification_status == VerificationStatus.SUPPORTED:
-                st.markdown(
-                    """
-                    <div class='alert-card ok'>
-                        <div class='card-head'>✓ Verified Grounded Statement</div>
-                        <div>This statement is supported by the cited consultation turn. Verify clinical relevance.</div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-            for fl in sel.audit_flags:
-                d = describe_flag(fl, sel, LINES)
-                card_cls = "crit" if fl.severity == AuditFlagSeverity.CRITICAL else "warn"
-                st.markdown(
-                    f"""
-                    <div class='alert-card {card_cls}'>
-                        <div class='card-head'>⚠️ {html.escape(d['title'])}</div>
-                        <div style='margin-bottom:4px;'>{html.escape(d['why'])}</div>
-                        <div style='font-size:0.8rem;'><strong>Suggested:</strong> {html.escape(d['prompt'])}</div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-
-            # Physician Modification Editor
-            st.markdown("<div class='dr-title' style='margin-top:14px;'><span>Physician Override & Resolution</span></div>", unsafe_allow_html=True)
-            if sel.source_exact_quote and (sel.clinician_edited_statement or sel.statement) != sel.source_exact_quote:
-                st.caption(f"Suggested transcript wording: “{html.escape(sel.source_exact_quote)}”")
-                st.button(
-                    "Accept Verbatim Transcript Wording",
-                    on_click=apply_text,
-                    args=(sel, sel.source_exact_quote),
-                    type="primary",
-                    key="btn_accept",
-                    use_container_width=True,
-                )
-                
-            current_val = sel.clinician_edited_statement or sel.statement
-            if edit_key(sel) not in st.session_state:
-                st.session_state[edit_key(sel)] = current_val
-                
-            st.text_area(
-                "Statement in Note",
-                key=edit_key(sel),
-                height=edit_height(st.session_state[edit_key(sel)]),
-                help="Edit this statement directly without truncation. Click 'Save Edit' to apply.",
-            )
-            
-            c_b1, c_b2 = st.columns(2)
-            c_b1.button("Save Edit", on_click=save_edit, args=(sel,), key="btn_save", type="primary", use_container_width=True)
-            c_b2.button("Keep As Written", on_click=mark_reviewed, args=(sel,), key="btn_keep", use_container_width=True)
