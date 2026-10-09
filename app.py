@@ -223,19 +223,20 @@ st.markdown(
        - NEVER carved (zero inset shadows)
        - Smooth pillowy rounded corners (16px to 24px)
        - NO side stripes on cards
+       - Systematic, tight, consistent spacing rhythm (King-Julyan frontend design)
     */
     :root {
         --bg: #eef1f5;
         --ink: #1e293b;
         --muted: #64748b;
-        --line: rgba(255, 255, 255, 0.7);
+        --line: rgba(255, 255, 255, 0.75);
         --accent: #0f766e;
         --accent-bg: #e2f2ef;
         
         /* Dual-direction realistic elevation */
         --elevated-card: 8px 8px 18px rgba(160, 172, 188, 0.38), -8px -8px 18px rgba(255, 255, 255, 0.92);
-        --elevated-pill: 5px 5px 12px rgba(160, 172, 188, 0.32), -5px -5px 12px rgba(255, 255, 255, 0.88);
-        --elevated-hover: 7px 7px 16px rgba(160, 172, 188, 0.42), -7px -7px 16px rgba(255, 255, 255, 0.96);
+        --elevated-pill: 4px 4px 10px rgba(160, 172, 188, 0.30), -4px -4px 10px rgba(255, 255, 255, 0.88);
+        --elevated-hover: 6px 6px 14px rgba(160, 172, 188, 0.40), -6px -6px 14px rgba(255, 255, 255, 0.95);
     }
     
     html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"] {
@@ -250,12 +251,12 @@ st.markdown(
         border-right: 1px solid rgba(255, 255, 255, 0.6) !important;
     }
     [data-testid="stSidebar"] > div:first-child {
-        padding-top: 1.35rem;
+        padding-top: 1.2rem;
     }
     
     .block-container {
         max-width: 1680px !important;
-        padding: 1.4rem clamp(1rem, 2.4vw, 2.4rem) 3rem !important;
+        padding: 1.2rem clamp(1rem, 2.2vw, 2.2rem) 2.5rem !important;
     }
     
     /* Main Elevated Containers */
@@ -263,43 +264,56 @@ st.markdown(
         background: var(--bg) !important;
         border: 1px solid rgba(255, 255, 255, 0.8) !important;
         border-radius: 24px !important;
-        padding: clamp(18px, 2.2vw, 28px) !important;
+        padding: 22px 24px !important;
         box-shadow: var(--elevated-card) !important;
     }
     .st-key-drawer_pane {
         position: sticky !important;
-        top: 14px !important;
-        max-height: calc(100vh - 28px) !important;
+        top: 12px !important;
+        max-height: calc(100vh - 24px) !important;
         overflow-y: auto !important;
     }
     
-    /* Patient Header */
+    /* Systematic Vertical Spacing Control */
+    .st-key-note_pane [data-testid="stVerticalBlock"],
+    .st-key-drawer_pane [data-testid="stVerticalBlock"] {
+        gap: 0.5rem !important;
+    }
+    .st-key-note_pane [data-testid="element-container"],
+    .st-key-drawer_pane [data-testid="element-container"] {
+        margin: 0 !important;
+    }
+    
+    /* Patient Header (Elevated Pill Bar) */
     .patient-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin: 0 0 1rem;
-        padding: 6px 4px 14px;
-        border-bottom: 1px solid rgba(160, 172, 188, 0.2);
+        margin: 0 0 12px 0;
+        padding: 12px 20px;
+        background: var(--bg);
+        border-radius: 20px;
+        box-shadow: var(--elevated-pill);
+        border: 1px solid rgba(255, 255, 255, 0.85);
     }
     .patient-header .title {
-        font-size: clamp(1.15rem, 1.6vw, 1.45rem);
+        font-size: clamp(1.1rem, 1.5vw, 1.35rem);
         font-weight: 750;
         letter-spacing: -0.025em;
         color: var(--ink);
     }
     .patient-header .meta {
         color: var(--muted);
-        font-size: 0.85rem;
+        font-size: 0.84rem;
         margin-left: 10px;
     }
     .badge-ok-count, .badge-review-count {
-        padding: 7px 16px !important;
+        padding: 6px 14px !important;
         border-radius: 999px !important;
-        font-size: 0.80rem !important;
+        font-size: 0.78rem !important;
         font-weight: 700 !important;
         box-shadow: var(--elevated-pill) !important;
-        border: 1px solid rgba(255, 255, 255, 0.8) !important;
+        border: 1px solid rgba(255, 255, 255, 0.85) !important;
     }
     .badge-ok-count {
         background: #e7f3ed !important;
@@ -310,20 +324,23 @@ st.markdown(
         color: #991b1b !important;
     }
 
-    /* Section & Field Labels */
+    /* Section & Field Labels with Crisp Rhythmic Spacing */
     .sec-header {
         color: var(--ink) !important;
         border-bottom: 1px solid rgba(160, 172, 188, 0.25) !important;
-        margin: 22px 0 12px !important;
-        padding-bottom: 7px !important;
+        margin: 16px 0 8px !important;
+        padding-bottom: 5px !important;
         letter-spacing: .12em !important;
-        font-size: 0.85rem !important;
+        font-size: 0.82rem !important;
         font-weight: 800 !important;
         text-transform: uppercase !important;
     }
+    .sec-header:first-of-type {
+        margin-top: 0 !important;
+    }
     .field-label {
-        margin: 14px 0 6px !important;
-        font-size: 0.72rem !important;
+        margin: 10px 0 4px !important;
+        font-size: 0.70rem !important;
         letter-spacing: .1em !important;
         color: #536579 !important;
         font-weight: 700 !important;
@@ -333,30 +350,33 @@ st.markdown(
         font-size: 0.84rem !important;
         color: var(--muted) !important;
         font-style: italic !important;
-        padding: 8px 12px !important;
+        padding: 8px 14px !important;
         background: var(--bg) !important;
-        border-radius: 12px !important;
+        border-radius: 14px !important;
         box-shadow: 2px 2px 6px rgba(160, 172, 188, 0.2), -2px -2px 6px rgba(255, 255, 255, 0.8) !important;
-        margin-bottom: 8px !important;
+        margin-bottom: 6px !important;
     }
 
     /* Elevated Pill Cards (Matching Air Conditioner, Wi-Fi Router, Smart TV in Reference) */
+    div[class*="claim_row_"] {
+        margin-bottom: 6px !important;
+    }
     div[class*="claim_row_"] button, div[class*="turn_row_"] button {
         border-radius: 16px !important;
         border: 1px solid rgba(255, 255, 255, 0.85) !important;
         background: var(--bg) !important;
         color: var(--ink) !important;
         box-shadow: var(--elevated-pill) !important;
-        padding: 12px 18px !important;
-        min-height: 48px !important;
-        line-height: 1.55 !important;
+        padding: 11px 16px !important;
+        min-height: 44px !important;
+        line-height: 1.5 !important;
         text-align: left !important;
         justify-content: flex-start !important;
         white-space: normal !important;
         word-break: break-word !important;
         overflow-wrap: break-word !important;
-        transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease !important;
-        margin-bottom: 8px !important;
+        transition: transform 0.14s ease, box-shadow 0.14s ease, background 0.14s ease !important;
+        margin: 0 !important;
         border-left: 1px solid rgba(255, 255, 255, 0.85) !important; /* NO side strip! */
     }
     div[class*="claim_row_"] button:hover, div[class*="turn_row_"] button:hover {
@@ -383,13 +403,13 @@ st.markdown(
     /* Evidence Drawer Components (Elevated · Never Carved) */
     .dr-title {
         color: #334155 !important;
-        font-size: 0.82rem !important;
+        font-size: 0.80rem !important;
         font-weight: 800 !important;
         letter-spacing: .10em !important;
         text-transform: uppercase !important;
-        padding-bottom: 8px !important;
+        padding-bottom: 6px !important;
         border-bottom: 1px solid rgba(160, 172, 188, 0.25) !important;
-        margin-bottom: 12px !important;
+        margin: 6px 0 10px 0 !important;
         display: flex !important;
         justify-content: space-between !important;
         align-items: center !important;
@@ -398,19 +418,19 @@ st.markdown(
         background: var(--bg) !important;
         border: 1px solid rgba(255, 255, 255, 0.85) !important;
         border-radius: 16px !important;
-        padding: 14px 18px !important;
+        padding: 12px 16px !important;
         box-shadow: var(--elevated-pill) !important; /* Elevated · Never Carved */
         font-style: italic !important;
-        line-height: 1.55 !important;
+        line-height: 1.5 !important;
         color: var(--ink) !important;
-        margin: 6px 0 14px 0 !important;
+        margin: 4px 0 12px 0 !important;
     }
     .alert-card {
         border-radius: 16px !important;
-        padding: 14px 18px !important;
+        padding: 12px 16px !important;
         box-shadow: var(--elevated-pill) !important; /* Elevated · Never Carved */
         border: 1px solid rgba(255, 255, 255, 0.8) !important;
-        margin-bottom: 12px !important;
+        margin: 4px 0 12px 0 !important;
     }
     .alert-card.crit {
         background: #fff3f1 !important;
@@ -425,16 +445,49 @@ st.markdown(
         color: #1e5a39 !important;
     }
 
+    /* Streamlit Tabs Styled as Elevated Switch Pills */
+    [data-testid="stTabs"] [data-baseweb="tab-list"] {
+        gap: 10px !important;
+        background: transparent !important;
+        border-bottom: none !important;
+        padding: 2px 0 12px 0 !important;
+    }
+    [data-testid="stTabs"] [data-baseweb="tab"] {
+        border-radius: 999px !important;
+        padding: 7px 18px !important;
+        background: var(--bg) !important;
+        box-shadow: var(--elevated-pill) !important;
+        border: 1px solid rgba(255, 255, 255, 0.85) !important;
+        color: var(--muted) !important;
+        font-weight: 650 !important;
+        font-size: 0.80rem !important;
+        transition: all 0.14s ease !important;
+    }
+    [data-testid="stTabs"] [data-baseweb="tab"]:hover {
+        transform: translateY(-1px) !important;
+        box-shadow: var(--elevated-hover) !important;
+    }
+    [data-testid="stTabs"] [data-baseweb="tab"][aria-selected="true"] {
+        color: #0f766e !important;
+        border-color: #0f766e !important;
+        background: #e1f1ee !important;
+    }
+    [data-testid="stTabs"] [data-baseweb="tab-highlight"],
+    [data-testid="stTabs"] [data-baseweb="tab-border"] {
+        display: none !important;
+    }
+
     /* Streamlit Buttons (Slightly Elevated Pills) */
     .stButton > button, .stDownloadButton > button {
-        min-height: 42px !important;
+        min-height: 40px !important;
         border-radius: 16px !important;
         border: 1px solid rgba(255, 255, 255, 0.85) !important;
         background: var(--bg) !important;
         color: var(--ink) !important;
         font-weight: 650 !important;
+        font-size: 0.83rem !important;
         box-shadow: var(--elevated-pill) !important;
-        transition: transform .15s ease, box-shadow .15s ease !important;
+        transition: transform .14s ease, box-shadow .14s ease !important;
     }
     .stButton > button:hover, .stDownloadButton > button:hover {
         transform: translateY(-2px) !important;
@@ -460,10 +513,11 @@ st.markdown(
         border-radius: 16px !important;
         background: var(--bg) !important;
         color: var(--ink) !important;
-        box-shadow: 3px 3px 8px rgba(160, 172, 188, 0.22), -3px -3px 8px rgba(255, 255, 255, 0.85) !important;
+        box-shadow: 3px 3px 8px rgba(160, 172, 188, 0.20), -3px -3px 8px rgba(255, 255, 255, 0.85) !important;
     }
     [data-testid="stCheckbox"] label {
-        line-height: 1.55 !important;
+        line-height: 1.5 !important;
+        font-size: 0.86rem !important;
     }
 
     /* Auth Gate Card (Elevated Neumorphic Modal) */
@@ -625,7 +679,7 @@ FILTERS = {
     "unassessed": f"Unassessed ({blank_n})",
 }
 
-col_f1, col_f2, col_f3, col_f4 = st.columns([1.2, 1.4, 1.4, 1.8], gap="small")
+col_f1, col_f2, col_f3, col_f4 = st.columns(4, gap="small")
 col_f1.button(
     FILTERS["all"],
     key="chip_all",
@@ -659,12 +713,10 @@ col_f4.button(
     type="primary" if review_n > 0 else "secondary",
 )
 
-st.markdown("<div style='height:8px;'></div>", unsafe_allow_html=True)
-
 # =============================================================================
 # WORKSPACE LAYOUT: PRIMARY SOAP CHART (LEFT) & EVIDENCE DRAWER (RIGHT)
 # =============================================================================
-col_note, col_drawer = st.columns([1.45, 1.05], gap="large")
+col_note, col_drawer = st.columns([1.4, 1.0], gap="medium")
 
 SECTIONS = [
     ("Subjective", [
@@ -762,7 +814,7 @@ with col_note:
             if not shown_any:
                 st.markdown("<div class='fld-blank-row'>No items require review in this view.</div>", unsafe_allow_html=True)
 
-        st.markdown("<div style='height:20px;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='margin-top:14px; border-top:1px solid rgba(160,172,188,0.2); padding-top:10px;'></div>", unsafe_allow_html=True)
         sign_off = st.checkbox(
             "I attest that I have reviewed this clinical documentation against the consultation record.",
             value=draft.clinician_review_confirmed,
