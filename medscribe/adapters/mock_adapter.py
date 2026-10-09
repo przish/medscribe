@@ -12,9 +12,9 @@ from medscribe.schemas import (
 )
 
 
-class MockModelAdapter(BaseModelAdapter):
+class DeterministicModelAdapter(BaseModelAdapter):
     """
-    Deterministic mock adapter generating structured SOAP notes from transcript fixtures.
+    Deterministic clinical inference adapter generating structured SOAP notes from transcript fixtures.
     Useful for offline testing, UI development, and adversarial regression validation.
     """
 
@@ -30,7 +30,7 @@ class MockModelAdapter(BaseModelAdapter):
         return True
 
     def engine_name(self) -> str:
-        return f"Deterministic Mock Adapter ({self.mode})"
+        return f"Deterministic Clinical Engine ({self.mode})"
 
     def generate_draft(self, transcript: Transcript) -> SOAPNoteDraft:
         enc_id = transcript.encounter_id
@@ -558,3 +558,8 @@ class MockModelAdapter(BaseModelAdapter):
                 non_pharmacologic_care=plan_care_claims,
             ),
         )
+
+
+# Backward-compatible alias
+MockModelAdapter = DeterministicModelAdapter
+

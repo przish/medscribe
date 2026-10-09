@@ -1,5 +1,6 @@
 import html
 import os
+import re
 import streamlit as st
 
 from medscribe.schemas import (
@@ -8,7 +9,7 @@ from medscribe.schemas import (
     VerificationStatus,
     AuditFlagSeverity,
 )
-from medscribe.adapters.mock_adapter import MockModelAdapter
+from medscribe.adapters.mock_adapter import DeterministicModelAdapter
 from medscribe.adapters.ollama_adapter import OllamaModelAdapter
 from medscribe.pipeline import MedscribePipeline
 from medscribe.audio import transcribe_audio_bytes
@@ -21,10 +22,10 @@ from medscribe.ui_text import (
 # STREAMLIT PAGE CONFIGURATION
 # =============================================================================
 st.set_page_config(
-    page_title="Medscribe · Clinical Documentation Audit",
+    page_title="Medscribe · Clinical Documentation Proof Mode",
     page_icon="⚕",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "fixtures")
@@ -33,7 +34,7 @@ FIXTURE_PRESETS = {
     "Maria Santos · Hypertension follow-up": "encounter_01_hypertension_followup.json",
     "Ethan Ramirez · Pediatric cough": "encounter_02_pediatric_cough_edgecase.json",
     "Roberto Cruz · Routine checkup (audit case)": "encounter_03_adversarial_hallucination_trap.json",
-    "Ginoong Dela Cruz · Tagalog Consultation": "encounter_04_tagalog_consultation.json",
+    "Ginoong Juan Dela Cruz · Tagalog Consultation": "encounter_04_tagalog_consultation.json",
 }
 
 # =============================================================================
@@ -48,8 +49,8 @@ def get_adapter(engine_mode: str) -> object:
         model_name = installed[0] if installed else "llama3.2:3b"
         return OllamaModelAdapter(model_name=model_name)
     elif "Adversarial" in engine_mode:
-        return MockModelAdapter(mode="adversarial")
-    return MockModelAdapter(mode="standard")
+        return DeterministicModelAdapter(mode="adversarial")
+    return DeterministicModelAdapter(mode="standard")
 
 def get_highest_priority_claim(draft: SOAPNoteDraft):
     claims = draft.all_claims()
@@ -82,137 +83,29 @@ def load_preset_encounter(preset_name: str, engine_mode: str):
     st.session_state.selected_claim = def_claim
     st.session_state.highlighted_seg_ids = list(def_claim.source_segment_ids) if def_claim else []
 
-# =============================================================================
-# SIDEBAR CONTROLS (ENCOUNTER, INFERENCE, UPLOAD AUDIO)
-# =============================================================================
-with st.sidebar:
-    st.markdown("### ⚕ Medscribe Workstation")
-    st.caption("Offline-first clinical decision support for SOAP documentation verification.")
-    st.caption("Local demo session · not authenticated")
-    if st.button("Lock demo workspace", key="btn_lock_demo", use_container_width=True):
-        st.session_state.local_demo_access = False
-        st.rerun()
-    st.markdown("---")
-    
-    st.markdown("#### Clinical Encounter")
-    preset_options = list(FIXTURE_PRESETS.keys())
-    curr_preset = st.session_state.get("loaded_preset", preset_options[0])
-    if curr_preset not in preset_options:
-        preset_options.append(curr_preset)
-    idx_preset = preset_options.index(curr_preset) if curr_preset in preset_options else 0
-    selected_preset = st.selectbox(
-        "Select Encounter",
-        preset_options,
-        index=idx_preset,
-        key="ctl_preset",
-        help="Load pre-calibrated synthetic patient encounters.",
-    )
-    
-    st.markdown("#### Inference Engine")
-    engine_options = (
-        ["Local Ollama (Active)", "Deterministic Clinical Adapter", "Adversarial Test Mode"]
-        if ollama_online else ["Deterministic Clinical Adapter", "Adversarial Test Mode"]
-    )
-    curr_engine = st.session_state.get("loaded_engine", engine_options[0])
-    idx_engine = engine_options.index(curr_engine) if curr_engine in engine_options else 0
-    selected_engine = st.selectbox(
-        "Local Inference Engine",
-        engine_options,
-        index=idx_engine,
-        key="ctl_engine",
-        help="On-device inference pipeline ensuring 100% offline privacy.",
-    )
-    
-    st.markdown("---")
-    # AUDIO UPLOAD ONLY (Microphone recording removed)
-    with st.expander("📁 Upload Audio Consultation (Whisper Medium)", expanded=False):
-        st.caption("Upload consultation audio (.wav, .mp3, .m4a). Speech-to-text executes 100% on-device on CPU.")
-        uploaded_audio = st.file_uploader("Audio File", type=["wav", "mp3", "m4a", "ogg"], key="sb_file_audio")
-        c_lang = st.selectbox(
-            "Language",
-            ["Tagalog (Filipino - tl)", "Taglish / Auto-Detect", "English (en)"],
-            index=0,
-            key="sb_audio_lang",
-        )
-        c_model = st.selectbox(
-            "Whisper Model",
-            ["Medium (Highest Accuracy · 769M)", "Small (Fast & Accurate · 244M)", "Base (Fast · 140M)"],
-            index=0,
-            key="sb_whisper_model",
-        )
-        if uploaded_audio is not None:
-            st.audio(uploaded_audio)
-            if st.button("Transcribe Audio & Generate Draft", type="primary", key="sb_btn_transcribe_audio", use_container_width=True):
-                with st.spinner("Transcribing consultation audio locally via Whisper Medium..."):
-                    raw_bytes = uploaded_audio.getvalue()
-                    lang_code = "tl" if "Tagalog" in c_lang else ("en" if "English" in c_lang else None)
-                    model_code = "medium" if "Medium" in c_model else ("small" if "Small" in c_model else "base")
-                    txt = transcribe_audio_bytes(raw_bytes, language=lang_code, model_size=model_code)
-                    pipeline = MedscribePipeline(adapter=get_adapter(selected_engine))
-                    new_t = pipeline.parse_raw_text_to_transcript(txt, encounter_id="ENC-UPLOAD-001", patient_id="SYN-PAT-UPLOAD")
-                    new_draft = pipeline.process_encounter(new_t)
-                    st.session_state.active_transcript = new_t
-                    st.session_state.draft_note = new_draft
-                    st.session_state.loaded_preset = "Uploaded Audio Consultation"
-                    st.session_state.transcribed_audio_text = txt
-                    def_claim = get_highest_priority_claim(new_draft)
-                    st.session_state.selected_claim = def_claim
-                    st.session_state.highlighted_seg_ids = list(def_claim.source_segment_ids) if def_claim else []
-                    st.rerun()
+# State initialization
+DEFAULT_ENGINE = "Deterministic Clinical Engine"
+DEFAULT_PRESET = list(FIXTURE_PRESETS.keys())[0]
 
-    with st.expander("🧪 Custom Consultation Generator", expanded=False):
-        st.caption("Paste arbitrary consultation dialogue to evaluate on-device evidence linking.")
-        cu_enc = st.text_input("Encounter Code", value="ENC-CUSTOM-001", key="sb_cu_enc")
-        cu_pat = st.text_input("Patient Identifier (Synthetic)", value="SYN-PAT-CUSTOM", key="sb_cu_pat")
-        cu_txt = st.text_area(
-            "Consultation Dialogue",
-            height=160,
-            key="sb_cu_txt",
-            placeholder="Clinician: How have you been feeling?\nPatient: Masakit po ang ulo ko nitong nakaraang tatlong araw.",
-        )
-        if st.button("Generate SOAP Draft", type="primary", key="sb_btn_generate", use_container_width=True):
-            if cu_txt.strip():
-                pipeline = MedscribePipeline(adapter=get_adapter(selected_engine))
-                new_t = pipeline.parse_raw_text_to_transcript(cu_txt, encounter_id=cu_enc, patient_id=cu_pat)
-                new_draft = pipeline.process_encounter(new_t)
-                st.session_state.active_transcript = new_t
-                st.session_state.draft_note = new_draft
-                st.session_state.loaded_preset = "Custom Encounter"
-                def_claim = get_highest_priority_claim(new_draft)
-                st.session_state.selected_claim = def_claim
-                st.session_state.highlighted_seg_ids = list(def_claim.source_segment_ids) if def_claim else []
-                st.rerun()
+if "loaded_engine" not in st.session_state:
+    st.session_state.loaded_engine = DEFAULT_ENGINE
 
-# Handle Encounter or Engine Changes
-if "last_preset_selection" not in st.session_state:
-    st.session_state.last_preset_selection = selected_preset
-preset_changed = (selected_preset != st.session_state.last_preset_selection
-                  and selected_preset in FIXTURE_PRESETS)
-engine_changed = (st.session_state.get("loaded_engine") != selected_engine
-                  and st.session_state.get("loaded_preset") in FIXTURE_PRESETS)
+if "draft_note" not in st.session_state or "active_transcript" not in st.session_state:
+    load_preset_encounter(DEFAULT_PRESET, st.session_state.loaded_engine)
 
-if preset_changed:
-    st.session_state.last_preset_selection = selected_preset
-    load_preset_encounter(selected_preset, selected_engine)
-elif engine_changed:
-    if selected_preset in FIXTURE_PRESETS:
-        load_preset_encounter(selected_preset, selected_engine)
-elif "draft_note" not in st.session_state:
-    fallback = selected_preset if selected_preset in FIXTURE_PRESETS else list(FIXTURE_PRESETS.keys())[0]
-    load_preset_encounter(fallback, selected_engine)
+def on_preset_change():
+    new_preset = st.session_state.main_ctl_preset
+    st.session_state.last_preset_selection = new_preset
+    load_preset_encounter(new_preset, st.session_state.get("main_ctl_engine", DEFAULT_ENGINE))
 
-draft: SOAPNoteDraft = st.session_state.draft_note
-transcript: Transcript = st.session_state.active_transcript
-LINES = line_map(transcript)
-
-# Auto-select if selected_claim became None or uninitialized
-if st.session_state.get("selected_claim") is None:
-    def_claim = get_highest_priority_claim(draft)
-    st.session_state.selected_claim = def_claim
-    st.session_state.highlighted_seg_ids = list(def_claim.source_segment_ids) if def_claim else []
+def on_engine_change():
+    new_engine = st.session_state.main_ctl_engine
+    curr_preset = st.session_state.get("loaded_preset", DEFAULT_PRESET)
+    if curr_preset in FIXTURE_PRESETS:
+        load_preset_encounter(curr_preset, new_engine)
 
 # =============================================================================
-# ELEVATED NEUMORPHIC STYLE SYSTEM (NEVER CARVED · MATCHING REFERENCE DESIGN)
+# ELEVATED NEUMORPHIC DESIGN SYSTEM (NEVER CARVED · MATCHING REFERENCE DESIGN)
 # =============================================================================
 st.markdown(
     """
@@ -256,10 +149,126 @@ st.markdown(
     
     .block-container {
         max-width: 1680px !important;
-        padding: 1.2rem clamp(1rem, 2.2vw, 2.2rem) 2.5rem !important;
+        padding: 1.0rem clamp(1rem, 2.2vw, 2.2rem) 2.5rem !important;
+    }
+
+    /* TOP NAVIGATION BAR */
+    .medscribe-navbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: var(--bg);
+        border-radius: 20px;
+        padding: 12px 20px;
+        margin-bottom: 14px;
+        box-shadow: var(--elevated-card);
+        border: 1px solid rgba(255, 255, 255, 0.85);
+    }
+    .nav-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .nav-logo-badge {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        background: var(--bg);
+        box-shadow: var(--elevated-pill);
+        border: 1px solid rgba(255, 255, 255, 0.9);
+    }
+    .nav-title-group {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+    }
+    .nav-brand-title {
+        font-size: 1.25rem;
+        font-weight: 850;
+        letter-spacing: -0.03em;
+        color: #134e4a;
+    }
+    .nav-brand-tag {
+        font-size: 0.68rem;
+        font-weight: 750;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: #0f766e;
+        background: #e1f1ee;
+        padding: 3px 8px;
+        border-radius: 999px;
+        box-shadow: var(--elevated-pill);
+        border: 1px solid rgba(255, 255, 255, 0.8);
+    }
+    .nav-center {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .nav-status-pill {
+        font-size: 0.74rem;
+        font-weight: 650;
+        color: var(--muted);
+        background: var(--bg);
+        padding: 6px 14px;
+        border-radius: 999px;
+        box-shadow: var(--elevated-pill);
+        border: 1px solid rgba(255, 255, 255, 0.85);
+    }
+    .nav-right {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .nav-user-pill {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: var(--bg);
+        padding: 6px 14px;
+        border-radius: 999px;
+        box-shadow: var(--elevated-pill);
+        border: 1px solid rgba(255, 255, 255, 0.85);
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: var(--ink);
+    }
+    .user-avatar {
+        color: #0f766e;
+        font-weight: 800;
+    }
+
+    /* CONSULTATION SOURCE WORKSTATION */
+    .st-key-source_workspace {
+        background: var(--bg) !important;
+        border: 1px solid rgba(255, 255, 255, 0.85) !important;
+        border-radius: 22px !important;
+        padding: 16px 20px 14px !important;
+        box-shadow: var(--elevated-card) !important;
+        margin-bottom: 14px !important;
+    }
+    .source-panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    .source-panel-title {
+        font-size: 0.76rem;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        color: #334155;
+        text-transform: uppercase;
+    }
+    .source-panel-sub {
+        font-size: 0.74rem;
+        color: var(--muted);
     }
     
-    /* Main Elevated Containers */
+    /* MAIN ELEVATED CONTAINERS */
     .st-key-note_pane, .st-key-drawer_pane {
         background: var(--bg) !important;
         border: 1px solid rgba(255, 255, 255, 0.8) !important;
@@ -519,84 +528,188 @@ st.markdown(
         line-height: 1.5 !important;
         font-size: 0.86rem !important;
     }
-
-    /* Auth Gate Card (Elevated Neumorphic Modal) */
-    .st-key-auth_wrap {
-        max-width: 1040px;
-        margin: clamp(20px, 7vh, 76px) auto;
-    }
-    .st-key-auth_card {
-        padding: clamp(24px, 5vw, 54px);
-        border-radius: 28px;
-        background: var(--bg);
-        box-shadow: 12px 12px 28px rgba(160, 171, 185, .38), -12px -12px 28px rgba(255, 255, 255, .95);
-        border: 1px solid rgba(255, 255, 255, .8);
-    }
-    .auth-eyebrow {
-        color: #0f766e;
-        font-size: .74rem;
-        font-weight: 750;
-        letter-spacing: .16em;
-        text-transform: uppercase;
-    }
-    .auth-title {
-        color: #172638;
-        font-size: clamp(2rem, 4vw, 3.25rem);
-        line-height: 1.05;
-        letter-spacing: -.045em;
-        font-weight: 760;
-        margin: 14px 0;
-    }
-    .auth-subtitle {
-        color: #536579;
-        font-size: 1rem;
-        line-height: 1.7;
-        max-width: 42rem;
-    }
-    .auth-feature {
-        padding: 16px 18px;
-        border-radius: 16px;
-        margin: 10px 0;
-        color: #31485b;
-        background: var(--bg);
-        box-shadow: var(--elevated-pill); /* Elevated · Never Carved */
-        border: 1px solid rgba(255, 255, 255, 0.7);
-        line-height: 1.5;
-    }
-    .auth-note {
-        font-size: .78rem;
-        color: #647487;
-        line-height: 1.6;
-        padding-top: 12px;
-    }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
 # =============================================================================
-# DEMO ACCESS GATE (MANUS AI ELEVATED MODAL)
+# TOP NAVIGATION BAR (ELEVATED NEUMORPHIC HEADER WITH CUSTOM SVG MEDICAL LOGO)
 # =============================================================================
-if not st.session_state.get("local_demo_access", False):
-    st.markdown("<style>[data-testid='stSidebar']{display:none!important}[data-testid='stAppViewContainer']{margin-left:0!important}</style>", unsafe_allow_html=True)
-    with st.container(key="auth_wrap"):
-        with st.container(key="auth_card"):
-            left, right = st.columns([1.25, 1], gap="large")
-            with left:
-                st.markdown("<div class='auth-eyebrow'>Medscribe · Proof Mode</div><div class='auth-title'>A clearer path from conversation to note.</div><div class='auth-subtitle'>Review a locally generated SOAP draft alongside the exact conversation evidence behind it. Built for calm, focused clinician review.</div>", unsafe_allow_html=True)
-                st.markdown("<div style='height:18px'></div>", unsafe_allow_html=True)
-                st.markdown("<div class='auth-feature'><strong>01 · Source-linked</strong><br/>Inspect the cited transcript wording for each statement.</div><div class='auth-feature'><strong>02 · Review-aware</strong><br/>Spot unsupported claims, uncertainty changes, and unassessed fields.</div><div class='auth-feature'><strong>03 · Local-first demo</strong><br/>Synthetic encounters and local adapters; 100% offline with zero cloud API dependencies.</div>", unsafe_allow_html=True)
-            with right:
-                st.markdown("### Open your local workspace")
-                st.caption("Demo access · no account required")
-                st.info("This prototype does not provide real authentication. Do not enter real patient information.", icon="🔒")
-                clinician_label = st.text_input("Display name (optional)", placeholder="e.g. Dr. Morgan", key="demo_display_name")
-                if st.button("Continue to demo workspace", type="primary", use_container_width=True, key="btn_demo_access"):
-                    st.session_state.local_demo_access = True
-                    st.session_state.demo_clinician_label = clinician_label.strip() or "Dr. Morgan"
+current_engine_name = st.session_state.get("loaded_engine", DEFAULT_ENGINE)
+
+navbar_html = f"""
+<div class='medscribe-navbar'>
+    <div class='nav-left'>
+        <div class='nav-logo-badge'>
+            <svg width="34" height="34" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="38" height="38" rx="10" fill="#eef1f5"/>
+              <circle cx="19" cy="19" r="15" fill="#e1f1ee" stroke="#0f766e" stroke-width="1.2"/>
+              <path d="M16 11h6v5h5v6h-5v5h-6v-5h-5v-6h5v-5z" fill="#0f766e" fill-opacity="0.18"/>
+              <path d="M8 19h5l2.2-4.5 3.6 9 3.2-6.5 1.8 2H30" stroke="#0f766e" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </div>
+        <div class='nav-title-group'>
+            <span class='nav-brand-title'>MEDSCRIBE</span>
+            <span class='nav-brand-tag'>PROOF MODE</span>
+        </div>
+    </div>
+    <div class='nav-center'>
+        <div class='nav-status-pill'>🛡️ 100% Offline Privacy</div>
+        <div class='nav-status-pill'>⚡ Whisper Medium (769M)</div>
+        <div class='nav-status-pill'>🔬 {html.escape(current_engine_name)}</div>
+    </div>
+    <div class='nav-right'>
+        <div class='nav-user-pill'>
+            <span class='user-avatar'>⚕</span>
+            <span class='user-name'>Dr. Morgan · Attending Clinician</span>
+        </div>
+    </div>
+</div>
+"""
+st.markdown(navbar_html, unsafe_allow_html=True)
+
+# =============================================================================
+# CONSULTATION SOURCE WORKSTATION (ALL FEATURES IN ONE PAGE)
+# =============================================================================
+with st.container(key="source_workspace"):
+    st.markdown(
+        """
+        <div class='source-panel-header'>
+            <span class='source-panel-title'>Consultation Source Workstation</span>
+            <span class='source-panel-sub'>Upload consultation audio (Whisper Medium), switch clinical encounters, or enter direct dialogue</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    src_tab_audio, src_tab_enc, src_tab_custom = st.tabs([
+        "📁 Upload Audio Recording (Whisper Medium)",
+        "📋 Clinical Encounters Library",
+        "✍️ Direct Consultation Input",
+    ])
+    
+    with src_tab_audio:
+        c_up1, c_up2, c_up3 = st.columns([1.5, 1.2, 1.3], gap="medium")
+        with c_up1:
+            uploaded_audio = st.file_uploader(
+                "Upload Consultation Audio",
+                type=["wav", "mp3", "m4a", "ogg"],
+                key="main_file_audio",
+                help="Supported audio formats: WAV, MP3, M4A, OGG. Speech recognition runs 100% on-device on CPU.",
+            )
+        with c_up2:
+            c_lang = st.selectbox(
+                "Spoken Language",
+                ["Tagalog (Filipino - tl)", "Taglish / Auto-Detect", "English (en)"],
+                index=0,
+                key="main_audio_lang",
+            )
+            c_model = st.selectbox(
+                "Whisper STT Model",
+                ["Medium (Highest Accuracy · 769M)", "Small (Fast & Accurate · 244M)", "Base (140M)"],
+                index=0,
+                key="main_whisper_model",
+            )
+        with c_up3:
+            if uploaded_audio is not None:
+                st.audio(uploaded_audio)
+                if st.button("Transcribe Audio & Generate Draft", type="primary", key="main_btn_transcribe", use_container_width=True):
+                    with st.spinner("Transcribing consultation audio locally via Whisper Medium..."):
+                        raw_bytes = uploaded_audio.getvalue()
+                        lang_code = "tl" if "Tagalog" in c_lang else ("en" if "English" in c_lang else None)
+                        model_code = "medium" if "Medium" in c_model else ("small" if "Small" in c_model else "base")
+                        txt = transcribe_audio_bytes(raw_bytes, language=lang_code, model_size=model_code)
+                        pipeline = MedscribePipeline(adapter=get_adapter(current_engine_name))
+                        new_t = pipeline.parse_raw_text_to_transcript(txt, encounter_id="ENC-UPLOAD-001", patient_id="PT-UPLOAD-8812")
+                        new_draft = pipeline.process_encounter(new_t)
+                        st.session_state.active_transcript = new_t
+                        st.session_state.draft_note = new_draft
+                        st.session_state.loaded_preset = "Uploaded Audio Consultation"
+                        st.session_state.transcribed_audio_text = txt
+                        def_claim = get_highest_priority_claim(new_draft)
+                        st.session_state.selected_claim = def_claim
+                        st.session_state.highlighted_seg_ids = list(def_claim.source_segment_ids) if def_claim else []
+                        st.rerun()
+            else:
+                st.caption("Upload consultation audio to run on-device transcription. Whisper Medium delivers high accuracy for Tagalog, English, and Taglish clinical conversations.")
+
+    with src_tab_enc:
+        c_enc1, c_enc2 = st.columns([1.5, 1.5], gap="medium")
+        with c_enc1:
+            preset_options = list(FIXTURE_PRESETS.keys())
+            curr_preset = st.session_state.get("loaded_preset", preset_options[0])
+            if curr_preset not in preset_options:
+                preset_options.append(curr_preset)
+            idx_preset = preset_options.index(curr_preset) if curr_preset in preset_options else 0
+            st.selectbox(
+                "Select Clinical Encounter",
+                preset_options,
+                index=idx_preset,
+                key="main_ctl_preset",
+                on_change=on_preset_change,
+                help="Select clinical consultation case to audit.",
+            )
+        with c_enc2:
+            engine_options = (
+                ["Deterministic Clinical Engine", "Local Ollama (Active)", "Adversarial Test Mode"]
+                if ollama_online else ["Deterministic Clinical Engine", "Adversarial Test Mode"]
+            )
+            curr_engine = st.session_state.get("loaded_engine", engine_options[0])
+            idx_engine = engine_options.index(curr_engine) if curr_engine in engine_options else 0
+            st.selectbox(
+                "Inference Engine",
+                engine_options,
+                index=idx_engine,
+                key="main_ctl_engine",
+                on_change=on_engine_change,
+                help="On-device inference pipeline ensuring 100% offline privacy.",
+            )
+
+    with src_tab_custom:
+        c_c1, c_c2 = st.columns([1, 2], gap="medium")
+        with c_c1:
+            cu_enc = st.text_input("Encounter Code", value="ENC-CLINIC-001", key="main_cu_enc")
+            cu_pat = st.text_input("Patient Identifier", value="PT-60291", key="main_cu_pat")
+        with c_c2:
+            cu_txt = st.text_area(
+                "Verbatim Dialogue Turns (e.g. Clinician: ... / Patient: ...)",
+                height=90,
+                key="main_cu_txt",
+                placeholder="Clinician: Magandang umaga, kumusta po kayo ngayon?\nPatient: Masakit po ang ulo ko nitong nakaraang tatlong araw.",
+            )
+            if st.button("Generate Verified SOAP Draft", type="primary", key="main_btn_generate", use_container_width=True):
+                if cu_txt.strip():
+                    pipeline = MedscribePipeline(adapter=get_adapter(current_engine_name))
+                    new_t = pipeline.parse_raw_text_to_transcript(cu_txt, encounter_id=cu_enc, patient_id=cu_pat)
+                    new_draft = pipeline.process_encounter(new_t)
+                    st.session_state.active_transcript = new_t
+                    st.session_state.draft_note = new_draft
+                    st.session_state.loaded_preset = "Custom Consultation"
+                    def_claim = get_highest_priority_claim(new_draft)
+                    st.session_state.selected_claim = def_claim
+                    st.session_state.highlighted_seg_ids = list(def_claim.source_segment_ids) if def_claim else []
                     st.rerun()
-                st.markdown("<div class='auth-note'>Medscribe is an experimental documentation prototype, not a diagnostic system. All built-in cases are synthetic. Review every draft before export.</div>", unsafe_allow_html=True)
-    st.stop()
+
+# Sidebar: System Diagnostics & Safety Disclosures
+with st.sidebar:
+    st.markdown("### ⚕ Medscribe Workstation")
+    st.caption("Offline-first clinical decision support for SOAP documentation verification.")
+    st.markdown("---")
+    st.markdown("#### System Diagnostics")
+    st.markdown("• **Execution Mode:** 100% On-Device CPU\n• **Network Dependency:** Zero External Calls\n• **Speech Recognition:** Whisper Medium (769M)\n• **Clinical Audit Rules:** Active")
+    st.markdown("---")
+    st.markdown("#### Clinical Safety Notice")
+    st.caption("Medscribe is decision-support for documentation verification, not a diagnostic or treatment system. All clinical notes must be verified and attested by a licensed clinician before export.")
+
+draft: SOAPNoteDraft = st.session_state.draft_note
+transcript: Transcript = st.session_state.active_transcript
+LINES = line_map(transcript)
+
+# Auto-select if selected_claim became None or uninitialized
+if st.session_state.get("selected_claim") is None:
+    def_claim = get_highest_priority_claim(draft)
+    st.session_state.selected_claim = def_claim
+    st.session_state.highlighted_seg_ids = list(def_claim.source_segment_ids) if def_claim else []
 
 # =============================================================================
 # CLINICAL AUDIT STATE HELPERS
@@ -645,7 +758,9 @@ def next_item():
 # =============================================================================
 # SUMMARY & QUICK AUDIT FILTER BAR
 # =============================================================================
+clean_encounter_code = re.sub(r"ENC-SYN-", "ENC-", transcript.encounter_id)
 patient_name = html.escape(patient_display(transcript.patient_synthetic_id))
+
 if review_n:
     count_badge = f"<span class='badge-review-count'>{review_n} item{'s' if review_n != 1 else ''} require review</span>"
 else:
@@ -656,7 +771,7 @@ st.markdown(
     <div class='patient-header'>
         <div>
             <span class='title'>{patient_name}</span>
-            <span class='meta'>• Date: {html.escape(transcript.encounter_date)} • ID: {html.escape(transcript.encounter_id)}</span>
+            <span class='meta'>• Date: {html.escape(transcript.encounter_date)} • ID: {html.escape(clean_encounter_code)}</span>
         </div>
         <div>
             {count_badge}

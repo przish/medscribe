@@ -3,7 +3,7 @@ import re
 from typing import Optional, Dict, Any, Union
 from medscribe.schemas import Transcript, SOAPNoteDraft, TranscriptSegment, SpeakerRole
 from medscribe.adapters.base import BaseModelAdapter
-from medscribe.adapters.mock_adapter import MockModelAdapter
+from medscribe.adapters.mock_adapter import DeterministicModelAdapter
 from medscribe.validator import EvidenceValidator
 
 
@@ -15,7 +15,7 @@ class MedscribePipeline:
     """
 
     def __init__(self, adapter: Optional[BaseModelAdapter] = None):
-        self.adapter = adapter or MockModelAdapter(mode="standard")
+        self.adapter = adapter or DeterministicModelAdapter(mode="standard")
 
     def load_transcript_from_dict(self, data: Dict[str, Any]) -> Transcript:
         return Transcript(**data)
