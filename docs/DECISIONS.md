@@ -2,7 +2,10 @@
 
 Use newest-first entries. The user owns product direction; when a new user prompt changes a decision, update this file immediately.
 
-## 2026-10-09 — Restrained Neumorphic UI Design Refinement
+## 2026-10-10 — On-Device Whisper Audio Capture & Streamlined EHR Audit Drawer
+- **On-Device Speech-to-Text:** Integrated local `faster-whisper` (tiny on CPU, int8 quantized) supporting live microphone recording via Streamlit native `st.audio_input` and audio file upload (`.wav`, `.mp3`, `.m4a`). Validated 100% offline with zero network sockets.
+- **Drawer Streamlining:** Eliminated repetitive vertical dialogue turn card buttons from the right evidence drawer (removing visual clutter and redundant button stacking). The evidence drawer now focuses strictly on the active statement's verbatim transcript quote, clinical audit translation, suggested verbatim wording 1-click accept, and full inline modification editor.
+- **Seamless Audio-to-SOAP Pipeline:** Audio is parsed directly into timestamped speaker turns, analyzed by local inference adapters, and deterministically verified for hallucination, omission, and negation.
 - **Visual Direction:** Adopted restrained, tactile neumorphism designed for high clinical credibility, calm focus, and accessible contrast (WCAG AAA/AA).
 - **Surface Geometry:** Warm light-gray monochromatic canvas (`#EEF1F4`) with dual-direction soft shadows (`4px 4px 10px rgba(166, 175, 189, 0.45), -4px -4px 10px rgba(255, 255, 255, 0.9)`) on tactile cards, combined with recessed surfaces (`box-shadow: inset 2px 2px 5px...`) for transcript turns and quotation callouts.
 - **Color System:** Deep navy typography (`#0F1E36`, 13.35:1 contrast ratio) and muted teal accents (`#0D9488` / `#0F766E`) for primary interactive states. Amber (`#D97706`) and crimson (`#DC2626`) strictly reserved for meaningful verification warnings and critical safety flags.

@@ -1,4 +1,5 @@
 import json
+import re
 from typing import Optional, Dict, Any, Union
 from medscribe.schemas import Transcript, SOAPNoteDraft, TranscriptSegment, SpeakerRole
 from medscribe.adapters.base import BaseModelAdapter
@@ -34,16 +35,21 @@ class MedscribePipeline:
         for idx, line in enumerate(lines, start=1):
             seg_id = f"seg-{idx:03d}"
             speaker = SpeakerRole.PATIENT
-            text = line
-            if line.lower().startswith("clinician:") or line.lower().startswith("doc:") or line.lower().startswith("doctor:"):
-                speaker = SpeakerRole.CLINICIAN
-                text = line.split(":", 1)[1].strip()
-            elif line.lower().startswith("patient:"):
-                speaker = SpeakerRole.PATIENT
-                text = line.split(":", 1)[1].strip()
-            elif line.lower().startswith("caregiver:"):
-                speaker = SpeakerRole.CAREGIVER
-                text = line.split(":", 1)[1].strip()
+            match = re.match(r"^([a-zA-Z]+)(?:\s*\[[^\]]+\])?\s*:\s*(.*)$", line)
+            if match:
+                spk_str = match.group(1).lower()
+                clean_text = match.group(2).strip()
+                if spk_str in ("clinician", "doctor", "doc"):
+                    speaker = SpeakerRole.CLINICIAN
+                    text = clean_text
+                elif spk_str == "patient":
+                    speaker = SpeakerRole.PATIENT
+                    text = clean_text
+                elif spk_str == "caregiver":
+                    speaker = SpeakerRole.CAREGIVER
+                    text = clean_text
+                else:
+                    text = clean_text
 
             segments.append(
                 TranscriptSegment(

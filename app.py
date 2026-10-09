@@ -11,6 +11,7 @@ from medscribe.schemas import (
 from medscribe.adapters.mock_adapter import MockModelAdapter
 from medscribe.adapters.ollama_adapter import OllamaModelAdapter
 from medscribe.pipeline import MedscribePipeline
+from medscribe.audio import transcribe_audio_bytes
 from medscribe.ui_text import (
     describe_flag, friendly, line_label, line_map, patient_display,
     unassessed_label, UNASSESSED_COPY,
@@ -92,13 +93,15 @@ with st.sidebar:
     st.markdown("#### Clinical Encounter")
     preset_options = list(FIXTURE_PRESETS.keys())
     curr_preset = st.session_state.get("loaded_preset", preset_options[0])
+    if curr_preset not in preset_options:
+        preset_options.append(curr_preset)
     idx_preset = preset_options.index(curr_preset) if curr_preset in preset_options else 0
     selected_preset = st.selectbox(
         "Select Encounter",
         preset_options,
         index=idx_preset,
         key="ctl_preset",
-        help="Load pre-calibrated synthetic patient encounters.",
+        help="Load pre-calibrated synthetic patient encounters or recorded consultations.",
     )
     
     st.markdown("#### Inference Engine")
@@ -135,6 +138,7 @@ with st.sidebar:
                 st.session_state.active_transcript = new_t
                 st.session_state.draft_note = new_draft
                 st.session_state.loaded_preset = "Custom Encounter"
+                st.session_state.last_preset_selection = "Custom Encounter"
                 def_claim = get_highest_priority_claim(new_draft)
                 st.session_state.selected_claim = def_claim
                 st.session_state.highlighted_seg_ids = list(def_claim.source_segment_ids) if def_claim else []
@@ -143,15 +147,17 @@ with st.sidebar:
 # Handle Encounter or Engine Changes
 if "last_preset_selection" not in st.session_state:
     st.session_state.last_preset_selection = selected_preset
-preset_changed = selected_preset != st.session_state.last_preset_selection
+preset_changed = (selected_preset != st.session_state.last_preset_selection
+                  and selected_preset in FIXTURE_PRESETS)
 engine_changed = (st.session_state.get("loaded_engine") != selected_engine
-                  and st.session_state.get("loaded_preset") != "Custom Encounter")
+                  and st.session_state.get("loaded_preset") in FIXTURE_PRESETS)
 
 if preset_changed:
     st.session_state.last_preset_selection = selected_preset
     load_preset_encounter(selected_preset, selected_engine)
 elif engine_changed or "draft_note" not in st.session_state:
-    load_preset_encounter(selected_preset, selected_engine)
+    if selected_preset in FIXTURE_PRESETS:
+        load_preset_encounter(selected_preset, selected_engine)
 
 draft: SOAPNoteDraft = st.session_state.draft_note
 transcript: Transcript = st.session_state.active_transcript
@@ -652,6 +658,49 @@ review_n = sum(1 for c in all_claims if needs_review(c))
 blank_n = len(draft.audit_summary.missing_fields)
 
 # =============================================================================
+# AUDIO CONSULTATION CAPTURE (LOCAL ON-DEVICE WHISPER)
+# =============================================================================
+with st.expander("🎙️ Capture Live Consultation Audio (Local On-Device Whisper)", expanded=False):
+    st.markdown(
+        "<div style='font-size:0.86rem; color:var(--muted); margin-bottom:10px;'>"
+        "Record live dialogue or upload a consultation audio file (.wav, .mp3, .m4a). "
+        "Speech recognition executes <strong>100% locally on-device via Whisper</strong> on CPU with zero internet connection or telemetry."
+        "</div>",
+        unsafe_allow_html=True,
+    )
+    c_aud_rec, c_aud_up = st.columns(2, gap="medium")
+    with c_aud_rec:
+        st.markdown("<div style='font-size:0.82rem; font-weight:700; color:var(--ink); margin-bottom:4px;'>Option A: Microphone Capture</div>", unsafe_allow_html=True)
+        mic_audio = st.audio_input("Record live consultation", key="ctl_mic_audio")
+    with c_aud_up:
+        st.markdown("<div style='font-size:0.82rem; font-weight:700; color:var(--ink); margin-bottom:4px;'>Option B: Upload Audio File</div>", unsafe_allow_html=True)
+        file_audio = st.file_uploader("Upload audio recording", type=["wav", "mp3", "m4a", "ogg"], key="ctl_file_audio")
+
+    active_audio = mic_audio or file_audio
+    if active_audio:
+        st.audio(active_audio)
+        if st.button("Transcribe On-Device & Generate Audited SOAP Note", type="primary", key="btn_transcribe_audio", use_container_width=True):
+            with st.spinner("Transcribing consultation audio locally via Whisper (100% on-device)..."):
+                audio_bytes = active_audio.read()
+                st_text = transcribe_audio_bytes(audio_bytes)
+                pipeline = MedscribePipeline(adapter=get_adapter(selected_engine))
+                new_transcript = pipeline.parse_raw_text_to_transcript(
+                    st_text,
+                    encounter_id="ENC-LIVE-AUDIO-001",
+                    patient_id="SYN-PAT-LIVE"
+                )
+                new_draft = pipeline.process_encounter(new_transcript)
+                st.session_state.active_transcript = new_transcript
+                st.session_state.draft_note = new_draft
+                st.session_state.loaded_preset = "Live Audio Consultation"
+                st.session_state.last_preset_selection = "Live Audio Consultation"
+                def_claim = get_highest_priority_claim(new_draft)
+                st.session_state.selected_claim = def_claim
+                st.session_state.highlighted_seg_ids = list(def_claim.source_segment_ids) if def_claim else []
+                st.success("Transcribed and verified on-device!")
+                st.rerun()
+
+# =============================================================================
 # SUMMARY & QUICK AUDIT FILTER BAR
 # =============================================================================
 patient_name = html.escape(patient_display(transcript.patient_synthetic_id))
@@ -941,48 +990,3 @@ with col_drawer:
             c_b1, c_b2 = st.columns(2)
             c_b1.button("Save Edit", on_click=save_edit, args=(sel,), key="btn_save", type="primary", use_container_width=True)
             c_b2.button("Keep As Written", on_click=mark_reviewed, args=(sel,), key="btn_keep", use_container_width=True)
-
-        # Bidirectional Linking: Consultation Dialogue Stream
-        st.markdown(
-            """
-            <div class='dr-title' style='margin-top:18px;'>
-                <span>Consultation Dialogue</span>
-                <span style='font-size:0.7rem; color:var(--muted); font-weight:400;'>Click turn to focus linked claim</span>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        
-        hits = set(st.session_state.highlighted_seg_ids)
-        for seg in transcript.segments:
-            s_id = seg.segment_id
-            l_num = line_label(s_id, LINES)
-            spk = "Clinician" if seg.speaker.value == "Clinician" else "Patient"
-            is_hit = s_id in hits
-            
-            # Find all claims citing this segment
-            linked_claims = [c for c in all_claims if s_id in c.source_segment_ids]
-            
-            turn_key = f"turn_row_{'hit' if is_hit else 'norm'}_{s_id}"
-            with st.container(key=turn_key):
-                if linked_claims:
-                    flagged_cnt = sum(1 for c in linked_claims if needs_review(c))
-                    badge = f" [⚠️ {flagged_cnt} Flagged]" if flagged_cnt else " [✓ Linked]"
-                    label = f"{l_num} · {spk}: {seg.text}{badge}"
-                    st.button(
-                        label,
-                        key=f"turn_btn_{s_id}",
-                        on_click=select_claim_from_segment,
-                        args=(linked_claims[0], s_id),
-                        use_container_width=True,
-                        help=f"Jump to claim citing {l_num}",
-                    )
-                else:
-                    label = f"{l_num} · {spk}: {seg.text} [Uncited]"
-                    st.button(
-                        label,
-                        key=f"turn_btn_{s_id}",
-                        disabled=True,
-                        use_container_width=True,
-                        help="No generated claims cite this dialogue turn",
-                    )

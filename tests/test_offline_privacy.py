@@ -33,3 +33,26 @@ def test_ollama_adapter_offline_graceful_handling():
     adapter = OllamaModelAdapter(host="http://127.0.0.1:9999")  # Unused port
     assert adapter.is_available() is False
     assert adapter.get_installed_models() == []
+
+
+def test_whisper_offline_guarded(monkeypatch):
+    """
+    Ensure Whisper speech-to-text operates locally without making network calls.
+    """
+    import os
+    from medscribe.audio import transcribe_audio_bytes
+
+    sample_path = os.path.join(os.path.dirname(__file__), "..", "fixtures", "sample_consultation.wav")
+    if not os.path.exists(sample_path):
+        pytest.skip("Audio fixture not found")
+
+    with open(sample_path, "rb") as f:
+        audio_bytes = f.read()
+
+    def guarded_connect(*args, **kwargs):
+        raise AssertionError("Network socket attempted during Whisper transcription!")
+
+    monkeypatch.setattr(socket.socket, "connect", guarded_connect)
+    text = transcribe_audio_bytes(audio_bytes)
+    assert len(text) > 0
+    assert "Clinician" in text or "Patient" in text

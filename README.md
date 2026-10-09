@@ -6,16 +6,17 @@
 ---
 
 ## 🔒 100% On-Device & Privacy-Preserving
-- **Meaningful Local Inference:** Uses local LLM inference via Ollama (`llama3.2:3b` or compatible local model) or a deterministic local test adapter. Zero patient data or audio leaves the device.
-- **Offline Proof:** The core transcription, note generation, deterministic grounding audit, and export operate completely offline with no network connection required.
-- **Purely Synthetic Scenarios:** All fixtures and demonstrations utilize strictly fictional clinical encounters.
+- **Local Speech-to-Text (Whisper):** Real-time microphone and file transcription executes directly on-device on CPU using `faster-whisper` with zero telemetry or network calls.
+- **Meaningful Local Inference:** Uses local LLM inference via Ollama (`llama3.2:3b` or compatible local model) or a deterministic local clinical adapter. Zero patient audio or data leaves the device.
+- **Offline Proof:** The core speech transcription, note drafting, deterministic grounding audit, and export operate completely offline with no network connection required.
+- **Purely Synthetic Scenarios:** All fixtures, audio samples, and demonstrations utilize strictly fictional clinical encounters.
 
 ---
 
 ## 💡 Why Medscribe Benefits From Running AI Locally
-1. **Absolute Patient Health Information (PHI) Privacy:** Clinical conversations and medical histories are sensitive. Running inference on-device guarantees zero cloud leakage, adhering to strict data sovereignty and healthcare privacy expectations.
+1. **Absolute Patient Health Information (PHI) Privacy:** Clinical conversations and medical histories are sensitive. Running both speech transcription (Whisper) and note extraction on-device guarantees zero cloud leakage, adhering to strict data sovereignty and healthcare privacy expectations.
 2. **Zero-Latency Resilience in Clinics & Hospitals:** Medical facilities frequently suffer from unreliable connectivity or dead zones. Medscribe operates continuously without internet dependencies.
-3. **Zero Inference Cloud Costs:** Clinics can run structured documentation pipelines without per-token cloud API bills.
+3. **Zero Inference Cloud Costs:** Clinics can run speech recognition and structured documentation pipelines without per-minute or per-token cloud API bills.
 
 ---
 
@@ -56,7 +57,7 @@ Open your browser at `http://localhost:8501`. The app begins with a local demo-a
 
 ## 🧪 Testing & Verification
 
-Run the automated test suite (all tests execute locally without network calls):
+Run the automated test suite (all tests execute locally without network calls, including socket guards):
 ```bash
 source .venv/bin/activate
 pytest -v
@@ -72,10 +73,16 @@ python3 smoke_test.py
 ## 🏗️ Architecture & Logical Flow
 
 ```
-[ Consultation Transcript (JSON / Turns) ]
+[ Live Microphone Recording / Audio File ]
                  │
                  ▼
-[ Local Inference Adapter (Ollama / Mock) ]
+[ Local On-Device Whisper (faster-whisper CPU) ]
+                 │
+                 ▼
+[ Consultation Transcript (Speaker Turns & Timestamps) ]
+                 │
+                 ▼
+[ Local Inference Adapter (Ollama / Deterministic) ]
                  │
                  ▼
 [ Structured Draft Note (Pydantic Schemas) ]
@@ -90,17 +97,16 @@ python3 smoke_test.py
                  │
                  ▼
 [ Proof-Mode UI (Streamlit) ]
-  ├── Side-by-Side Source vs Audited Note
   ├── Interactive Claim Citation Inspection
-  ├── Clinician In-Line Editing
-  └── Verified Export Gate (Locked until Review)
+  ├── Physician Override & 1-Click Wording Replacement
+  └── Verified Export Gate (Locked until Review Attestation)
 ```
 
 ---
 
 ## 📋 Hackathon Disclosures & Deliverables
-- **Models Used:** Ollama local LLMs (default `llama3.2:3b`) + deterministic grounded testing adapters.
-- **Technologies & Frameworks:** Python 3.9, Pydantic v2, Streamlit, Pytest, Requests.
+- **Models Used:** On-device Whisper (`faster-whisper` tiny on CPU) + Ollama local LLMs (default `llama3.2:3b`) + deterministic grounded testing adapters.
+- **Technologies & Frameworks:** Python 3.9, Faster-Whisper, Pydantic v2, Streamlit, Pytest, Requests.
 - **APIs & Cloud Services:** **None** (100% Offline Local Pipeline).
 - **Existing Code & Assets:** None. Built fresh during AppBuildersPH Hackathon 2026.
 - **AI Development Tools:** Google Antigravity.

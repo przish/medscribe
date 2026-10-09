@@ -15,10 +15,10 @@ Status legend: `[ ]` not started · `[-]` in progress · `[x]` verified complete
 - [x] Demonstrate the full main workflow with internet disconnected after setup. (Verified: `smoke_test.py` and `tests/test_offline_privacy.py`).
 
 ## P1 — Only after P0 works
-- [ ] Add optional local speech-to-text input (e.g. whisper.cpp).
+- [x] Add on-device local speech-to-text input (Verified: `faster-whisper` tiny on CPU, microphone and file upload, 100% offline socket guarded).
 - [x] Improve evidence highlighting and claim navigation. (Verified: restrained neumorphic proof mode, active claim halo, quote preview, and inline editing).
-- [x] User-requested responsive neumorphic refresh supersedes the prior desktop-only direction (see DECISIONS 2026-10-10). Verified: 15 pytest tests, AppTest access/workspace flow, and sandbox browser preview at tablet content width.
-- [ ] Create one-minute demo video and submission disclosures.
+- [x] Streamline EHR audit workspace by removing repetitive dialogue card button strip.
+- [-] Create one-minute demo video script and submission disclosures.
 
 ## Explicitly defer unless the user asks
 - [ ] Real authentication/account management, EHR integrations, cloud sync, remote LLM use, production deployment. (A UI-only demo access screen is present; it provides no security.)
