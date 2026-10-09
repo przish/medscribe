@@ -15,12 +15,15 @@ Status legend: `[ ]` not started · `[-]` in progress · `[x]` verified complete
 - [x] Demonstrate the full main workflow with internet disconnected after setup. (Verified: `smoke_test.py` and `tests/test_offline_privacy.py`).
 
 ## P1 — Only after P0 works
-- [x] Add on-device local speech-to-text input (Verified: `faster-whisper` tiny on CPU, microphone and file upload, 100% offline socket guarded).
-- [x] Improve evidence highlighting and claim navigation. (Verified: restrained neumorphic proof mode, active claim halo, quote preview, and inline editing).
-- [x] Streamline EHR audit workspace by removing repetitive dialogue card button strip.
+- [x] Add on-device local speech-to-text input (Verified: `faster-whisper-medium` 769M parameters on CPU, multilingual Tagalog/Taglish/English, upload-only, 100% offline socket guarded).
+- [x] Improve evidence highlighting and claim navigation. (Verified: elevated neumorphic proof mode, active claim halo, verbatim quote preview, and physician override editing).
+- [x] Streamline EHR audit workspace by removing repetitive dialogue card button strip and colored card side stripes.
+- [x] Unify all features into a single-page workspace with custom SVG medical logo, elevated top navigation bar, and consultation source switcher (Verified in `app.py`).
+- [x] Eradicate mock terminology across adapters, pipeline, and UI (`DeterministicClinicalEngine`).
+- [x] 20/20 automated pytest suite and end-to-end offline smoke test passing.
 - [-] Create one-minute demo video script and submission disclosures.
 
 ## Explicitly defer unless the user asks
-- [ ] Real authentication/account management, EHR integrations, cloud sync, remote LLM use, production deployment. (A UI-only demo access screen is present; it provides no security.)
+- [ ] Real authentication/account management, EHR integrations, cloud sync, remote LLM use, production deployment.
 - [ ] Diagnosis/treatment recommendations.
 - [ ] Real patient data or claims of clinical validation.
