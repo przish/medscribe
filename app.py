@@ -105,16 +105,17 @@ def on_engine_change():
         load_preset_encounter(curr_preset, new_engine)
 
 # =============================================================================
-# ELEVATED NEUMORPHIC DESIGN SYSTEM (NEVER CARVED · MATCHING REFERENCE DESIGN)
+# ELEVATED NEUMORPHIC DESIGN SYSTEM (ZERO OUTLINES · SOFT EDGES MATCHING REFERENCE)
 # =============================================================================
 st.markdown(
     """
     <style>
-    /* Elevated Neumorphic Design System matching attached reference:
+    /* Elevated Neumorphic Design System (Reference: media_1791586805877_484f78de.png):
        - Soft silky warm-gray canvas (#eef1f5)
+       - ZERO OUTLINES / BORDERS: All edges are pure soft shadows blending into canvas
        - All cards & elements are SLIGHTLY ELEVATED (dual-direction positive drop shadows)
        - NEVER carved (zero inset shadows)
-       - Smooth pillowy rounded corners (16px to 24px)
+       - Smooth pillowy rounded corners (18px to 24px)
        - NO side stripes on cards
        - Complete eradication of sidebar and header clutter
     */
@@ -122,14 +123,13 @@ st.markdown(
         --bg: #eef1f5;
         --ink: #1e293b;
         --muted: #64748b;
-        --line: rgba(255, 255, 255, 0.75);
         --accent: #0f766e;
         --accent-bg: #e2f2ef;
         
-        /* Dual-direction realistic elevation */
-        --elevated-card: 8px 8px 18px rgba(160, 172, 188, 0.38), -8px -8px 18px rgba(255, 255, 255, 0.92);
-        --elevated-pill: 4px 4px 10px rgba(160, 172, 188, 0.30), -4px -4px 10px rgba(255, 255, 255, 0.88);
-        --elevated-hover: 6px 6px 14px rgba(160, 172, 188, 0.40), -6px -6px 14px rgba(255, 255, 255, 0.95);
+        /* Dual-direction realistic elevation with soft pillowy edges */
+        --elevated-card: 8px 8px 18px rgba(160, 172, 188, 0.35), -8px -8px 18px rgba(255, 255, 255, 0.95);
+        --elevated-pill: 4px 4px 10px rgba(160, 172, 188, 0.28), -4px -4px 10px rgba(255, 255, 255, 0.90);
+        --elevated-hover: 6px 6px 14px rgba(160, 172, 188, 0.38), -6px -6px 14px rgba(255, 255, 255, 0.98);
     }
     
     html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"] {
@@ -169,17 +169,18 @@ st.markdown(
         margin: 0 auto !important;
     }
 
-    /* SLEEK ELEVATED TOP NAVIGATION BAR */
+    /* SLEEK ELEVATED TOP NAVIGATION BAR (ZERO OUTLINES) */
     .medscribe-navbar {
         display: flex;
         justify-content: space-between;
         align-items: center;
         background: var(--bg);
-        border-radius: 22px;
+        border-radius: 24px;
         padding: 12px 22px;
         margin-bottom: 16px;
         box-shadow: var(--elevated-card);
-        border: 1px solid rgba(255, 255, 255, 0.9);
+        border: none !important;
+        outline: none !important;
     }
     .nav-left {
         display: flex;
@@ -195,7 +196,8 @@ st.markdown(
         border-radius: 12px;
         background: var(--bg);
         box-shadow: var(--elevated-pill);
-        border: 1px solid rgba(255, 255, 255, 0.95);
+        border: none !important;
+        outline: none !important;
     }
     .nav-brand-group {
         display: flex;
@@ -215,10 +217,11 @@ st.markdown(
         text-transform: uppercase;
         color: #0f766e;
         background: #e1f1ee;
-        padding: 3px 9px;
+        padding: 4px 10px;
         border-radius: 999px;
         box-shadow: var(--elevated-pill);
-        border: 1px solid rgba(255, 255, 255, 0.85);
+        border: none !important;
+        outline: none !important;
     }
     .nav-status-group {
         display: flex;
@@ -228,7 +231,8 @@ st.markdown(
         padding: 7px 18px;
         border-radius: 999px;
         box-shadow: var(--elevated-pill);
-        border: 1px solid rgba(255, 255, 255, 0.88);
+        border: none !important;
+        outline: none !important;
         font-size: 0.78rem;
         color: var(--muted);
         font-weight: 600;
@@ -241,11 +245,12 @@ st.markdown(
         font-weight: 700;
     }
 
-    /* CONSULTATION SOURCE WORKSTATION */
+    /* CONSULTATION SOURCE WORKSTATION (ZERO OUTLINES) */
     .st-key-source_workspace {
         background: var(--bg) !important;
-        border: 1px solid rgba(255, 255, 255, 0.85) !important;
-        border-radius: 22px !important;
+        border: none !important;
+        outline: none !important;
+        border-radius: 24px !important;
         padding: 18px 22px 16px !important;
         box-shadow: var(--elevated-card) !important;
         margin-bottom: 16px !important;
@@ -270,18 +275,20 @@ st.markdown(
 
     [data-testid="stFileUploaderDropzone"] {
         background: var(--bg) !important;
-        border: 1.5px dashed rgba(160, 172, 188, 0.45) !important;
-        border-radius: 16px !important;
+        border: 2px dashed rgba(160, 172, 188, 0.35) !important;
+        border-radius: 18px !important;
         box-shadow: var(--elevated-pill) !important;
+        outline: none !important;
     }
     [data-testid="stFileUploaderDropzone"]:hover {
         border-color: #0f766e !important;
     }
     
-    /* MAIN ELEVATED CONTAINERS */
+    /* MAIN ELEVATED CONTAINERS (ZERO OUTLINES) */
     .st-key-note_pane, .st-key-drawer_pane {
         background: var(--bg) !important;
-        border: 1px solid rgba(255, 255, 255, 0.8) !important;
+        border: none !important;
+        outline: none !important;
         border-radius: 24px !important;
         padding: 22px 24px !important;
         box-shadow: var(--elevated-card) !important;
@@ -303,7 +310,7 @@ st.markdown(
         margin: 0 !important;
     }
     
-    /* Patient Header (Elevated Pill Bar) */
+    /* Patient Header (Elevated Pill Bar · Zero Outlines) */
     .patient-header {
         display: flex;
         justify-content: space-between;
@@ -313,7 +320,8 @@ st.markdown(
         background: var(--bg);
         border-radius: 20px;
         box-shadow: var(--elevated-pill);
-        border: 1px solid rgba(255, 255, 255, 0.88);
+        border: none !important;
+        outline: none !important;
     }
     .patient-header .title {
         font-size: clamp(1.1rem, 1.5vw, 1.35rem);
@@ -332,7 +340,8 @@ st.markdown(
         font-size: 0.78rem !important;
         font-weight: 700 !important;
         box-shadow: var(--elevated-pill) !important;
-        border: 1px solid rgba(255, 255, 255, 0.85) !important;
+        border: none !important;
+        outline: none !important;
     }
     .badge-ok-count {
         background: #e7f3ed !important;
@@ -343,10 +352,10 @@ st.markdown(
         color: #991b1b !important;
     }
 
-    /* Section & Field Labels with Crisp Rhythmic Spacing */
+    /* Section & Field Labels with Soft Separators */
     .sec-header {
         color: var(--ink) !important;
-        border-bottom: 1px solid rgba(160, 172, 188, 0.25) !important;
+        border-bottom: 2px solid rgba(160, 172, 188, 0.15) !important;
         margin: 16px 0 8px !important;
         padding-bottom: 5px !important;
         letter-spacing: .12em !important;
@@ -374,20 +383,23 @@ st.markdown(
         border-radius: 14px !important;
         box-shadow: 2px 2px 6px rgba(160, 172, 188, 0.2), -2px -2px 6px rgba(255, 255, 255, 0.8) !important;
         margin-bottom: 6px !important;
+        border: none !important;
+        outline: none !important;
     }
 
-    /* Elevated Pill Cards (Matching Air Conditioner, Wi-Fi Router, Smart TV in Reference) */
+    /* Soft Elevated Pill Cards (ZERO OUTLINES · PURE SOFT EDGES MATCHING REFERENCE) */
     div[class*="claim_row_"] {
-        margin-bottom: 6px !important;
+        margin-bottom: 8px !important;
     }
     div[class*="claim_row_"] button, div[class*="turn_row_"] button {
-        border-radius: 16px !important;
-        border: 1px solid rgba(255, 255, 255, 0.85) !important;
+        border-radius: 18px !important;
+        border: none !important;
+        outline: none !important;
         background: var(--bg) !important;
         color: var(--ink) !important;
         box-shadow: var(--elevated-pill) !important;
-        padding: 11px 16px !important;
-        min-height: 44px !important;
+        padding: 12px 18px !important;
+        min-height: 46px !important;
         line-height: 1.5 !important;
         text-align: left !important;
         justify-content: flex-start !important;
@@ -396,7 +408,6 @@ st.markdown(
         overflow-wrap: break-word !important;
         transition: transform 0.14s ease, box-shadow 0.14s ease, background 0.14s ease !important;
         margin: 0 !important;
-        border-left: 1px solid rgba(255, 255, 255, 0.85) !important; /* NO side strip! */
     }
     div[class*="claim_row_"] button:hover, div[class*="turn_row_"] button:hover {
         transform: translateY(-2px) !important;
@@ -404,22 +415,28 @@ st.markdown(
         cursor: pointer !important;
     }
     div[class*="claim_row_crit"] button {
-        background: #fff3f1 !important;
-        border-color: #fecaca !important;
-        color: #881c1c !important;
+        background: #fff1f0 !important;
+        border: none !important;
+        outline: none !important;
+        color: #991b1b !important;
+        box-shadow: 4px 4px 10px rgba(220, 38, 38, 0.10), -4px -4px 10px rgba(255, 255, 255, 0.90) !important;
     }
     div[class*="claim_row_warn"] button {
-        background: #fff8eb !important;
-        border-color: #fde68a !important;
-        color: #853e09 !important;
+        background: #fff9ed !important;
+        border: none !important;
+        outline: none !important;
+        color: #92400e !important;
+        box-shadow: 4px 4px 10px rgba(217, 119, 6, 0.10), -4px -4px 10px rgba(255, 255, 255, 0.90) !important;
     }
     div[class*="claim_row_sel"] button {
-        outline: 2px solid #0f766e !important;
-        outline-offset: 2px !important;
-        background: #e1f1ee !important;
+        border: none !important;
+        outline: none !important;
+        background: #e2f2ef !important;
+        color: #134e4a !important;
+        box-shadow: 4px 4px 12px rgba(15, 118, 110, 0.18), -4px -4px 12px rgba(255, 255, 255, 0.95) !important;
     }
 
-    /* Evidence Drawer Components (Elevated · Never Carved) */
+    /* Evidence Drawer Components (Elevated · Zero Outlines) */
     .dr-title {
         color: #334155 !important;
         font-size: 0.80rem !important;
@@ -427,7 +444,7 @@ st.markdown(
         letter-spacing: .10em !important;
         text-transform: uppercase !important;
         padding-bottom: 6px !important;
-        border-bottom: 1px solid rgba(160, 172, 188, 0.25) !important;
+        border-bottom: 2px solid rgba(160, 172, 188, 0.15) !important;
         margin: 6px 0 10px 0 !important;
         display: flex !important;
         justify-content: space-between !important;
@@ -435,36 +452,41 @@ st.markdown(
     }
     .quote-box {
         background: var(--bg) !important;
-        border: 1px solid rgba(255, 255, 255, 0.85) !important;
-        border-radius: 16px !important;
-        padding: 12px 16px !important;
-        box-shadow: var(--elevated-pill) !important; /* Elevated · Never Carved */
+        border: none !important;
+        outline: none !important;
+        border-radius: 18px !important;
+        padding: 13px 18px !important;
+        box-shadow: var(--elevated-pill) !important;
         font-style: italic !important;
         line-height: 1.5 !important;
         color: var(--ink) !important;
         margin: 4px 0 12px 0 !important;
     }
     .alert-card {
-        border-radius: 16px !important;
-        padding: 12px 16px !important;
-        box-shadow: var(--elevated-pill) !important; /* Elevated · Never Carved */
-        border: 1px solid rgba(255, 255, 255, 0.8) !important;
+        border-radius: 18px !important;
+        padding: 13px 18px !important;
+        box-shadow: var(--elevated-pill) !important;
+        border: none !important;
+        outline: none !important;
         margin: 4px 0 12px 0 !important;
     }
     .alert-card.crit {
-        background: #fff3f1 !important;
-        color: #881c1c !important;
+        background: #fff1f0 !important;
+        color: #991b1b !important;
+        box-shadow: 4px 4px 10px rgba(220, 38, 38, 0.10), -4px -4px 10px rgba(255, 255, 255, 0.90) !important;
     }
     .alert-card.warn {
-        background: #fff8eb !important;
-        color: #853e09 !important;
+        background: #fff9ed !important;
+        color: #92400e !important;
+        box-shadow: 4px 4px 10px rgba(217, 119, 6, 0.10), -4px -4px 10px rgba(255, 255, 255, 0.90) !important;
     }
     .alert-card.ok {
         background: #e7f3ed !important;
         color: #1e5a39 !important;
+        box-shadow: 4px 4px 10px rgba(16, 185, 129, 0.10), -4px -4px 10px rgba(255, 255, 255, 0.90) !important;
     }
 
-    /* Streamlit Tabs Styled as Elevated Switch Pills */
+    /* Streamlit Tabs Styled as Soft Elevated Switch Pills (Zero Outlines) */
     [data-testid="stTabs"] [data-baseweb="tab-list"] {
         gap: 12px !important;
         background: transparent !important;
@@ -476,7 +498,8 @@ st.markdown(
         padding: 8px 20px !important;
         background: var(--bg) !important;
         box-shadow: var(--elevated-pill) !important;
-        border: 1px solid rgba(255, 255, 255, 0.9) !important;
+        border: none !important;
+        outline: none !important;
         color: var(--muted) !important;
         font-weight: 650 !important;
         font-size: 0.82rem !important;
@@ -489,7 +512,8 @@ st.markdown(
     }
     [data-testid="stTabs"] [data-baseweb="tab"][aria-selected="true"] {
         color: #0f766e !important;
-        border-color: rgba(15, 118, 110, 0.3) !important;
+        border: none !important;
+        outline: none !important;
         background: #e1f1ee !important;
         font-weight: 750 !important;
     }
@@ -498,11 +522,12 @@ st.markdown(
         display: none !important;
     }
 
-    /* Streamlit Buttons (Slightly Elevated Pills) */
+    /* Streamlit Buttons (Soft Elevated Pills · Zero Outlines) */
     .stButton > button, .stDownloadButton > button {
-        min-height: 40px !important;
-        border-radius: 16px !important;
-        border: 1px solid rgba(255, 255, 255, 0.85) !important;
+        min-height: 42px !important;
+        border-radius: 18px !important;
+        border: none !important;
+        outline: none !important;
         background: var(--bg) !important;
         color: var(--ink) !important;
         font-weight: 650 !important;
@@ -513,13 +538,13 @@ st.markdown(
     .stButton > button:hover, .stDownloadButton > button:hover {
         transform: translateY(-2px) !important;
         box-shadow: var(--elevated-hover) !important;
-        border-color: #9abdb7 !important;
         color: #0f625d !important;
     }
     button[kind="primary"] {
         background: #176e67 !important;
         color: white !important;
-        border-color: #176e67 !important;
+        border: none !important;
+        outline: none !important;
         box-shadow: 4px 4px 12px rgba(23, 110, 103, 0.28), -4px -4px 12px rgba(255, 255, 255, 0.85) !important;
     }
     button[kind="primary"]:hover {
@@ -528,9 +553,10 @@ st.markdown(
         transform: translateY(-2px) !important;
     }
 
-    /* Textareas and Inputs (Slightly Elevated · Never Carved) */
+    /* Textareas and Inputs (Soft Elevated · Zero Outlines) */
     [data-testid="stTextArea"] textarea, [data-testid="stTextInput"] input, [data-testid="stSelectbox"] [role="combobox"] {
-        border: 1px solid rgba(255, 255, 255, 0.85) !important;
+        border: none !important;
+        outline: none !important;
         border-radius: 16px !important;
         background: var(--bg) !important;
         color: var(--ink) !important;
@@ -551,7 +577,7 @@ st.markdown(
         color: var(--muted);
         margin-top: 24px;
         padding-top: 14px;
-        border-top: 1px solid rgba(160, 172, 188, 0.2);
+        border-top: 2px solid rgba(160, 172, 188, 0.15);
     }
     </style>
     """,
@@ -640,7 +666,7 @@ with st.container(key="source_workspace"):
                         model_code = "medium" if "Medium" in c_model else ("small" if "Small" in c_model else "base")
                         txt = transcribe_audio_bytes(raw_bytes, language=lang_code, model_size=model_code)
                         pipeline = MedscribePipeline(adapter=get_adapter(current_engine_name))
-                        new_t = pipeline.parse_raw_text_to_transcript(txt, encounter_id="ENC-UPLOAD-001", patient_id="PT-UPLOAD-8812")
+                        new_t = pipeline.parse_raw_text_to_transcript(txt, encounter_id="ENC-AUDIO-RECORDING", patient_id="PT-AUDIO-RECORDING")
                         new_draft = pipeline.process_encounter(new_t)
                         st.session_state.active_transcript = new_t
                         st.session_state.draft_note = new_draft
@@ -688,7 +714,7 @@ with st.container(key="source_workspace"):
     with src_tab_custom:
         c_c1, c_c2 = st.columns([1, 2], gap="medium")
         with c_c1:
-            cu_enc = st.text_input("Encounter Code", value="ENC-CLINIC-001", key="main_cu_enc")
+            cu_enc = st.text_input("Encounter Code", value="ENC-LIVE-01", key="main_cu_enc")
             cu_pat = st.text_input("Patient Identifier", value="PT-60291", key="main_cu_pat")
         with c_c2:
             cu_txt = st.text_area(
@@ -938,7 +964,7 @@ with col_note:
             if not shown_any:
                 st.markdown("<div class='fld-blank-row'>No items require review in this view.</div>", unsafe_allow_html=True)
 
-        st.markdown("<div style='margin-top:14px; border-top:1px solid rgba(160,172,188,0.2); padding-top:10px;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='margin-top:14px; border-top:2px solid rgba(160,172,188,0.15); padding-top:10px;'></div>", unsafe_allow_html=True)
         sign_off = st.checkbox(
             "I attest that I have reviewed this clinical documentation against the consultation record.",
             value=draft.clinician_review_confirmed,
@@ -1071,22 +1097,21 @@ with col_drawer:
                 spk = seg.speaker.value
                 is_hit = s_id in hits
                 
-                border_clr = "#0f766e" if is_hit else "rgba(255,255,255,0.85)"
-                bg_clr = "#e1f1ee" if is_hit else "var(--bg)"
-                badge_html = "<span style='font-size:0.68rem; background:#0f766e; color:#ffffff; padding:2px 7px; border-radius:4px; font-weight:700;'>● CITED IN ACTIVE CLAIM</span>" if is_hit else ""
+                bg_clr = "#e2f2ef" if is_hit else "var(--bg)"
+                shadow_style = "box-shadow: 4px 4px 12px rgba(15,118,110,0.22), -4px -4px 12px rgba(255,255,255,0.95);" if is_hit else "box-shadow: var(--elevated-pill);"
+                badge_html = "<span style='font-size:0.68rem; background:#0f766e; color:#ffffff; padding:3px 8px; border-radius:999px; font-weight:700;'>● CITED IN ACTIVE CLAIM</span>" if is_hit else ""
                 
-                st.markdown(
-                    f"""
-                    <div style='padding:12px 16px; margin-bottom:8px; border-radius:16px; border:1px solid {border_clr}; background:{bg_clr}; box-shadow:var(--elevated-pill); font-size:0.86rem; line-height:1.5;'>
-                        <div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;'>
-                            <span style='font-weight:750; font-size:0.72rem; color:var(--muted); text-transform:uppercase;'>{l_num} · {spk}</span>
-                            {badge_html}
-                        </div>
-                        <div style='color:var(--ink);'>{html.escape(seg.text)}</div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
+                t_card = (
+                    f"<div style='padding:14px 18px; margin-bottom:10px; border-radius:18px; "
+                    f"background:{bg_clr}; {shadow_style} font-size:0.86rem; line-height:1.5; border:none; outline:none;'>"
+                    f"<div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;'>"
+                    f"<span style='font-weight:750; font-size:0.72rem; color:var(--muted); text-transform:uppercase;'>{l_num} · {spk}</span>"
+                    f"{badge_html}"
+                    f"</div>"
+                    f"<div style='color:var(--ink); font-weight:500;'>{html.escape(seg.text)}</div>"
+                    f"</div>"
                 )
+                st.markdown(t_card, unsafe_allow_html=True)
 
 # Subtle footer
 st.markdown(

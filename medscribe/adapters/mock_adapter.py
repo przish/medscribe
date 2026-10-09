@@ -35,11 +35,12 @@ class DeterministicModelAdapter(BaseModelAdapter):
     def generate_draft(self, transcript: Transcript) -> SOAPNoteDraft:
         enc_id = transcript.encounter_id
 
-        if "001" in enc_id:
+        # Only use static calibrated reference benchmarks for the exact synthetic test fixtures
+        if enc_id == "ENC-SYN-2026-001":
             return self._build_hypertension_draft(transcript)
-        elif "002" in enc_id:
+        elif enc_id == "ENC-SYN-2026-002":
             return self._build_pediatric_draft(transcript)
-        elif "003" in enc_id or self.mode == "adversarial":
+        elif enc_id == "ENC-SYN-2026-003" or (self.mode == "adversarial" and enc_id.startswith("ENC-SYN")):
             return self._build_adversarial_draft(transcript)
         else:
             return self._build_generic_draft(transcript)
@@ -401,22 +402,27 @@ class DeterministicModelAdapter(BaseModelAdapter):
         claim_idx = 1
         for seg in transcript.segments:
             text = seg.text.strip()
+            if not text:
+                continue
             low = text.lower()
             s_id = seg.segment_id
+            is_clinician = (seg.speaker.value.lower() in ("clinician", "doctor", "doc"))
 
             # Keywords covering English, Tagalog, and Taglish clinical dialogue
             symptom_words = [
-                "masakit", "pananakit", "ulo", "tiyan", "ubo", "sipon", "lagnat", "nahihilo", "hininga",
-                "pain", "headache", "cough", "fever", "chest", "dizzy", "shortness", "fatigue", "leeg"
+                "masakit", "pananakit", "kumikirot", "kirot", "hapdi", "ulo", "tiyan", "ubo", "sipon",
+                "lagnat", "nahihilo", "hilo", "hininga", "hingal", "hirap", "leeg", "katawan", "likod",
+                "tuhod", "binti", "dibdib", "pain", "headache", "cough", "fever", "chest", "dizzy",
+                "shortness", "fatigue", "weak", "tired", "sakit", "nararamdaman", "problema"
             ]
             med_words = [
-                "gamot", "inumin", "iniinom", "maintenance", "reseta", "take", "pill", "mg", "dose",
-                "amlodipine", "metformin", "paracetamol", "biogesic", "losartan", "aspirin", "antibiotic"
+                "gamot", "inumin", "iniinom", "maintenance", "reseta", "take", "pill", "tablet", "kapsula",
+                "mg", "dose", "amlodipine", "metformin", "paracetamol", "biogesic", "losartan", "aspirin", "antibiotic"
             ]
-            allergy_words = ["allergy", "alergi", "allergic", "bawal", "rash", "singaw", "hives", "kati"]
-            vitals_words = ["bp", "blood pressure", "120/", "130/", "140/", "150/", "over", "temperatura", "temp", "timbang", "kilo", "weight", "pulse"]
-            assess_words = ["hypertension", "altapresyon", "diabetes", "trangkaso", "flu", "impeksyon", "infection", "hika", "asthma", "pneumonia", "impression"]
-            plan_words = ["pahinga", "rest", "diet", "iwasan", "tubig", "water", "bumalik", "balik", "next week", "follow-up", "lab", "laboratoryo", "test", "checkup"]
+            allergy_words = ["allergy", "alergi", "allergic", "bawal", "rash", "singaw", "hives", "kati", "nangangati"]
+            vitals_words = ["bp", "blood pressure", "120/", "130/", "140/", "150/", "over", "temperatura", "temp", "timbang", "kilo", "weight", "pulse", "tibok"]
+            assess_words = ["hypertension", "altapresyon", "diabetes", "trangkaso", "flu", "impeksyon", "infection", "hika", "asthma", "pneumonia", "impression", "diagnos", "findings"]
+            plan_words = ["pahinga", "rest", "diet", "iwasan", "tubig", "water", "bumalik", "balik", "next week", "follow-up", "lab", "laboratoryo", "test", "checkup", "payo", "gawin", "ireseta", "prescribe"]
 
             if any(w in low for w in allergy_words):
                 allergy_claims.append(
@@ -431,7 +437,7 @@ class DeterministicModelAdapter(BaseModelAdapter):
                     )
                 )
                 claim_idx += 1
-            elif any(w in low for w in med_words) and ("ireseta" in low or "prescribe" in low or "take this" in low or seg.speaker.value == "Clinician"):
+            elif any(w in low for w in med_words) and (is_clinician or "ireseta" in low or "prescribe" in low):
                 plan_med_claims.append(
                     SOAPClaim(
                         claim_id=f"CLM-GEN-{claim_idx:02d}",
@@ -470,7 +476,7 @@ class DeterministicModelAdapter(BaseModelAdapter):
                     )
                 )
                 claim_idx += 1
-            elif any(w in low for w in assess_words):
+            elif any(w in low for w in assess_words) and is_clinician:
                 assessment_claims.append(
                     SOAPClaim(
                         claim_id=f"CLM-GEN-{claim_idx:02d}",
@@ -483,7 +489,7 @@ class DeterministicModelAdapter(BaseModelAdapter):
                     )
                 )
                 claim_idx += 1
-            elif any(w in low for w in plan_words):
+            elif any(w in low for w in plan_words) and is_clinician:
                 plan_care_claims.append(
                     SOAPClaim(
                         claim_id=f"CLM-GEN-{claim_idx:02d}",
@@ -522,6 +528,47 @@ class DeterministicModelAdapter(BaseModelAdapter):
                         )
                     )
                 claim_idx += 1
+            else:
+                # Capture conversational and descriptive dialogue dynamically
+                if not is_clinician:
+                    if not cc_claims:
+                        cc_claims.append(
+                            SOAPClaim(
+                                claim_id=f"CLM-GEN-{claim_idx:02d}",
+                                category="Subjective",
+                                field="chief_complaint",
+                                statement=text,
+                                verification_status=VerificationStatus.SUPPORTED,
+                                source_segment_ids=[s_id],
+                                source_exact_quote=text,
+                            )
+                        )
+                    else:
+                        hpi_claims.append(
+                            SOAPClaim(
+                                claim_id=f"CLM-GEN-{claim_idx:02d}",
+                                category="Subjective",
+                                field="hpi",
+                                statement=text,
+                                verification_status=VerificationStatus.SUPPORTED,
+                                source_segment_ids=[s_id],
+                                source_exact_quote=text,
+                            )
+                        )
+                    claim_idx += 1
+                elif is_clinician and len(text) > 15:
+                    plan_care_claims.append(
+                        SOAPClaim(
+                            claim_id=f"CLM-GEN-{claim_idx:02d}",
+                            category="Plan",
+                            field="non_pharmacologic_care",
+                            statement=text,
+                            verification_status=VerificationStatus.SUPPORTED,
+                            source_segment_ids=[s_id],
+                            source_exact_quote=text,
+                        )
+                    )
+                    claim_idx += 1
 
         if not cc_claims and transcript.segments:
             first_s = transcript.segments[0]
