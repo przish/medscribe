@@ -1,0 +1,77 @@
+{
+  "encounter_id": "ENC-SYN-2026-001",
+  "patient_synthetic_id": "SYN-PAT-101 (Maria Santos, 54F)",
+  "encounter_date": "2026-10-09",
+  "segments": [
+    {
+      "segment_id": "seg-001",
+      "speaker": "Clinician",
+      "start_time": "00:00:01",
+      "end_time": "00:00:08",
+      "text": "Good morning Mrs. Santos. We are reviewing your blood pressure today. How have you been feeling since our last visit?"
+    },
+    {
+      "segment_id": "seg-002",
+      "speaker": "Patient",
+      "start_time": "00:00:09",
+      "end_time": "00:00:21",
+      "text": "Good morning Doc. Generally okay, but I get occasional mild occipital headaches in the afternoon when I am tired from work."
+    },
+    {
+      "segment_id": "seg-003",
+      "speaker": "Clinician",
+      "start_time": "00:00:22",
+      "end_time": "00:00:30",
+      "text": "Are you experiencing any chest discomfort, palpitations, shortness of breath, or swelling in your feet?"
+    },
+    {
+      "segment_id": "seg-004",
+      "speaker": "Patient",
+      "start_time": "00:00:31",
+      "end_time": "00:00:41",
+      "text": "No chest pain at all. No difficulty breathing and no ankle swelling. None of those."
+    },
+    {
+      "segment_id": "seg-005",
+      "speaker": "Clinician",
+      "start_time": "00:00:42",
+      "end_time": "00:00:49",
+      "text": "Good. And what medications are you currently taking, exactly as prescribed?"
+    },
+    {
+      "segment_id": "seg-006",
+      "speaker": "Patient",
+      "start_time": "00:00:50",
+      "end_time": "00:01:06",
+      "text": "I take Amlodipine 5 milligrams once daily in the morning. To be honest, I sometimes miss the Sunday dose when we visit our grandchildren. My sister takes Losartan 50mg, but I do not take that."
+    },
+    {
+      "segment_id": "seg-007",
+      "speaker": "Clinician",
+      "start_time": "00:01:07",
+      "end_time": "00:01:14",
+      "text": "Understood. Any drug allergies that we should know about?"
+    },
+    {
+      "segment_id": "seg-008",
+      "speaker": "Patient",
+      "start_time": "00:01:15",
+      "end_time": "00:01:22",
+      "text": "Penicillin gives me an itchy skin rash and hives. No other allergies."
+    },
+    {
+      "segment_id": "seg-009",
+      "speaker": "Clinician",
+      "start_time": "00:01:23",
+      "end_time": "00:01:38",
+      "text": "Let me take your blood pressure right now in the right arm sitting. It is 138 over 86 millimeters of mercury, pulse rate 74 regular."
+    },
+    {
+      "segment_id": "seg-010",
+      "speaker": "Clinician",
+      "start_time": "00:01:39",
+      "end_time": "00:02:02",
+      "text": "Your blood pressure is borderline elevated today, likely related to missed doses. We will keep Amlodipine at 5mg daily. Please set a phone alarm so you don't miss Sunday doses. Return in 4 weeks for repeat BP check, or sooner if headaches worsen."
+    }
+  ]
+}

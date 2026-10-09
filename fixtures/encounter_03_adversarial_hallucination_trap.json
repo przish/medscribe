@@ -1,0 +1,42 @@
+{
+  "encounter_id": "ENC-SYN-2026-003",
+  "patient_synthetic_id": "SYN-PAT-303 (Roberto Cruz, 62M)",
+  "encounter_date": "2026-10-09",
+  "segments": [
+    {
+      "segment_id": "seg-201",
+      "speaker": "Clinician",
+      "start_time": "00:00:01",
+      "end_time": "00:00:09",
+      "text": "Good afternoon Mr. Cruz. I see you're here for routine checkup. Any new symptoms or medical history updates?"
+    },
+    {
+      "segment_id": "seg-202",
+      "speaker": "Patient",
+      "start_time": "00:00:10",
+      "end_time": "00:00:27",
+      "text": "Well, I don't have diabetes... wait, actually my previous clinic told me last year my fasting sugar was borderline, but nobody started me on Metformin."
+    },
+    {
+      "segment_id": "seg-203",
+      "speaker": "Clinician",
+      "start_time": "00:00:28",
+      "end_time": "00:00:35",
+      "text": "I see. And what about your daily medications? Are you taking anything regularly?"
+    },
+    {
+      "segment_id": "seg-204",
+      "speaker": "Patient",
+      "start_time": "00:00:36",
+      "end_time": "00:00:52",
+      "text": "I take half a tablet or maybe one tablet of something white for cholesterol, but I forgot the brand name and strength. My wife usually manages the pillbox."
+    },
+    {
+      "segment_id": "seg-205",
+      "speaker": "Clinician",
+      "start_time": "00:00:53",
+      "end_time": "00:01:05",
+      "text": "We will need your wife to bring the actual box. No physical exam today since we need to run fasting blood labs first. Come back next Tuesday fasting."
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "encounter_id": "ENC-SYN-2026-002",
+  "patient_synthetic_id": "SYN-PED-202 (Ethan Ramirez, 7M)",
+  "encounter_date": "2026-10-09",
+  "segments": [
+    {
+      "segment_id": "seg-101",
+      "speaker": "Clinician",
+      "start_time": "00:00:01",
+      "end_time": "00:00:07",
+      "text": "Hello Mrs. Ramirez. What brings Ethan in to the clinic today?"
+    },
+    {
+      "segment_id": "seg-102",
+      "speaker": "Caregiver",
+      "start_time": "00:00:08",
+      "end_time": "00:00:22",
+      "text": "Doc, he has had a dry hacky cough for 3 days. He does NOT have fever today, although he had a mild warm forehead two days ago."
+    },
+    {
+      "segment_id": "seg-103",
+      "speaker": "Clinician",
+      "start_time": "00:00:23",
+      "end_time": "00:00:30",
+      "text": "Has he had any vomiting, diarrhea, or difficulty breathing like wheezing or chest indrawing?"
+    },
+    {
+      "segment_id": "seg-104",
+      "speaker": "Caregiver",
+      "start_time": "00:00:31",
+      "end_time": "00:00:43",
+      "text": "No vomiting, no diarrhea, and breathing seems normal. He is still eating and active."
+    },
+    {
+      "segment_id": "seg-105",
+      "speaker": "Clinician",
+      "start_time": "00:00:44",
+      "end_time": "00:00:50",
+      "text": "What medicines have you given him at home?"
+    },
+    {
+      "segment_id": "seg-106",
+      "speaker": "Caregiver",
+      "start_time": "00:00:51",
+      "end_time": "00:01:08",
+      "text": "We stopped Paracetamol yesterday because he complained of an upset tummy after taking it, and we only gave warm water with honey last night. Does he have any allergies? None that we know of."
+    },
+    {
+      "segment_id": "seg-107",
+      "speaker": "Clinician",
+      "start_time": "00:01:09",
+      "end_time": "00:01:25",
+      "text": "Let me listen to his chest. Lungs are clear bilaterally with good air entry, no wheezes or crackles. Throat has mild pharyngeal erythema, tonsils are not enlarged."
+    },
+    {
+      "segment_id": "seg-108",
+      "speaker": "Clinician",
+      "start_time": "00:01:26",
+      "end_time": "00:01:50",
+      "text": "This appears to be an uncomplicated viral upper respiratory infection. We should hold off on any antibiotics—antibiotics are not indicated here. Continue oral hydration, honey for cough relief, and come back immediately if you notice fast breathing or high fever."
+    }
+  ]
+}
