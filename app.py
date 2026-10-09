@@ -31,6 +31,7 @@ FIXTURE_PRESETS = {
     "Maria Santos · Hypertension follow-up": "encounter_01_hypertension_followup.json",
     "Ethan Ramirez · Pediatric cough": "encounter_02_pediatric_cough_edgecase.json",
     "Roberto Cruz · Routine checkup (audit case)": "encounter_03_adversarial_hallucination_trap.json",
+    "Ginoong Dela Cruz · Tagalog Consultation": "encounter_04_tagalog_consultation.json",
 }
 
 # =============================================================================
@@ -309,41 +310,53 @@ st.markdown(
     }
 
     /* Statement Row Clickable Buttons */
+    /* Statement Row Clickable Buttons - Sleek EHR Style (No Side Stripes) */
     div[class*="claim_row_"] button {
         width: 100% !important;
         text-align: left !important;
         justify-content: flex-start !important;
-        padding: 7px 12px !important;
-        min-height: 38px !important;
+        align-items: flex-start !important;
+        padding: 9px 14px !important;
+        min-height: 42px !important;
         height: auto !important;
-        border-radius: 4px !important;
+        border-radius: 8px !important;
         font-size: 0.9rem !important;
-        line-height: 1.45 !important;
+        line-height: 1.5 !important;
         white-space: normal !important;
         word-break: break-word !important;
-        border: 1px solid transparent !important;
-        border-left-width: 4px !important;
-        margin-bottom: 3px !important;
+        overflow-wrap: break-word !important;
+        border: 1px solid var(--line) !important;
+        border-left: 1px solid var(--line) !important;
+        margin-bottom: 5px !important;
         background: #FFFFFF !important;
         color: var(--ink) !important;
         transition: all 0.12s ease-in-out !important;
         box-shadow: none !important;
     }
+    div[class*="claim_row_"] button p,
+    div[class*="claim_row_"] button div {
+        white-space: normal !important;
+        word-break: break-word !important;
+        overflow-wrap: break-word !important;
+        text-align: left !important;
+    }
     
     div[class*="claim_row_crit"] button {
-        background: var(--red-bg) !important;
-        border-left: 4px solid var(--red-bar) !important;
-        color: var(--red-ink) !important;
+        background: #FFF1F2 !important;
+        border: 1px solid #FECACA !important;
+        border-left: 1px solid #FECACA !important;
+        color: #991B1B !important;
     }
     div[class*="claim_row_warn"] button {
-        background: var(--amber-bg) !important;
-        border-left: 4px solid var(--amber-bar) !important;
-        color: var(--amber-ink) !important;
+        background: #FFFBEB !important;
+        border: 1px solid #FDE68A !important;
+        border-left: 1px solid #FDE68A !important;
+        color: #92400E !important;
     }
     div[class*="claim_row_ok"] button {
         background: #FFFFFF !important;
         border: 1px solid var(--line) !important;
-        border-left: 4px solid #CBD5E1 !important;
+        border-left: 1px solid var(--line) !important;
         color: var(--ink) !important;
     }
     div[class*="claim_row_sel"] button {
@@ -353,17 +366,17 @@ st.markdown(
     }
     
     div[class*="claim_row_"] button:hover {
-        background: #F1F5F9 !important;
+        background: #F8FAFC !important;
         border-color: #94A3B8 !important;
         cursor: pointer !important;
     }
     div[class*="claim_row_crit"] button:hover {
         background: #FEE2E2 !important;
-        border-left: 4px solid var(--red-bar) !important;
+        border-color: #EF4444 !important;
     }
     div[class*="claim_row_warn"] button:hover {
         background: #FEF3C7 !important;
-        border-left: 4px solid var(--amber-bar) !important;
+        border-color: #F59E0B !important;
     }
 
     /* Right Evidence Pane Styling */
@@ -380,13 +393,13 @@ st.markdown(
     }
     
     .quote-box {
-        border-left: 3px solid var(--ink);
+        border: 1px solid var(--line);
         background: #F1F5F9;
         padding: 8px 12px;
         font-size: 0.92rem;
         line-height: 1.45;
         margin: 4px 0 12px 0;
-        border-radius: 0 4px 4px 0;
+        border-radius: 6px;
     }
     
     .alert-card {
@@ -396,21 +409,20 @@ st.markdown(
         font-size: 0.88rem;
         line-height: 1.5;
         border: 1px solid transparent;
-        border-left-width: 4px;
     }
     .alert-card.crit {
         background: var(--red-bg);
-        border-color: var(--red-bar);
+        border: 1px solid var(--red-bar);
         color: var(--red-ink);
     }
     .alert-card.warn {
         background: var(--amber-bg);
-        border-color: var(--amber-bar);
+        border: 1px solid var(--amber-bar);
         color: var(--amber-ink);
     }
     .alert-card.ok {
         background: var(--green-bg);
-        border-color: var(--green-bar);
+        border: 1px solid var(--green-bar);
         color: var(--green-ink);
     }
     .alert-card .card-head {
@@ -427,13 +439,12 @@ st.markdown(
         padding: 6px 10px !important;
         min-height: 34px !important;
         height: auto !important;
-        border-radius: 4px !important;
+        border-radius: 6px !important;
         font-size: 0.84rem !important;
         line-height: 1.4 !important;
         white-space: normal !important;
         word-break: break-word !important;
         border: 1px solid var(--line) !important;
-        border-left: 3px solid #CBD5E1 !important;
         margin-bottom: 4px !important;
         background: #FFFFFF !important;
         color: var(--ink) !important;
@@ -443,7 +454,6 @@ st.markdown(
     div[class*="turn_row_hit"] button {
         background: #DBEAFE !important;
         border: 1px solid var(--accent) !important;
-        border-left: 4px solid var(--accent) !important;
         color: #1E3A8A !important;
     }
     div[class*="turn_row_"] button:hover {
@@ -526,19 +536,24 @@ st.markdown(
     .sec-header { color: var(--ink) !important; border-bottom: 1px solid #bfcbd5 !important; margin: 22px 0 11px !important; padding-bottom: 7px !important; letter-spacing: .12em !important; }
     .field-label { margin: 14px 0 6px !important; font-size: .7rem !important; letter-spacing: .1em !important; color: #536579 !important; }
     div[class*="claim_row_"] button, div[class*="turn_row_"] button {
-        border-radius: 13px !important; border: 1px solid rgba(255,255,255,.8) !important;
-        background: #eef1f4 !important; color: var(--ink) !important;
-        box-shadow: 3px 3px 8px rgba(163,174,187,.26), -3px -3px 8px rgba(255,255,255,.8) !important;
-        transition: transform .16s ease, box-shadow .16s ease, background .16s ease !important;
+        border-radius: 8px !important; border: 1px solid #d2dbe3 !important;
+        border-left: 1px solid #d2dbe3 !important;
+        background: #ffffff !important; color: var(--ink) !important;
+        box-shadow: 2px 2px 6px rgba(163,174,187,.18) !important;
+        transition: transform .14s ease, border-color .14s ease, background .14s ease !important;
+        white-space: normal !important; word-break: break-word !important; overflow-wrap: break-word !important; height: auto !important;
     }
-    div[class*="claim_row_"] button { padding: 10px 14px !important; min-height: 44px !important; line-height: 1.55 !important; border-left: 4px solid #aebbc5 !important; text-align: left !important; justify-content: flex-start !important; }
-    div[class*="claim_row_crit"] button { background: #fff0ed !important; border-left-color: #c24135 !important; color: #6f241f !important; }
-    div[class*="claim_row_warn"] button { background: #fff6e5 !important; border-left-color: #bd7a12 !important; color: #68430d !important; }
+    div[class*="claim_row_"] button p, div[class*="claim_row_"] button div {
+        white-space: normal !important; word-break: break-word !important; overflow-wrap: break-word !important; text-align: left !important;
+    }
+    div[class*="claim_row_"] button { padding: 10px 14px !important; min-height: 44px !important; line-height: 1.55 !important; border: 1px solid #d2dbe3 !important; border-left: 1px solid #d2dbe3 !important; text-align: left !important; justify-content: flex-start !important; }
+    div[class*="claim_row_crit"] button { background: #fff5f5 !important; border: 1px solid #fca5a5 !important; border-left: 1px solid #fca5a5 !important; color: #991b1b !important; }
+    div[class*="claim_row_warn"] button { background: #fffbeb !important; border: 1px solid #fcd34d !important; border-left: 1px solid #fcd34d !important; color: #92400e !important; }
     div[class*="claim_row_sel"] button { outline: 2px solid #0f766e !important; outline-offset: 2px !important; background: #e3f1ee !important; }
-    div[class*="claim_row_"] button:hover, div[class*="turn_row_"] button:hover { transform: translateY(-1px); box-shadow: 4px 5px 11px rgba(163,174,187,.3), -3px -3px 8px rgba(255,255,255,.85) !important; }
+    div[class*="claim_row_"] button:hover, div[class*="turn_row_"] button:hover { transform: translateY(-1px); box-shadow: 3px 4px 9px rgba(163,174,187,.24) !important; border-color: #0f766e !important; }
     .dr-title { color: #41566b !important; letter-spacing: .11em !important; padding-bottom: 7px; border-bottom: 1px solid #d3dce4; }
-    .quote-box { background: #e9edf1 !important; border-left: 3px solid #0f766e !important; border-radius: 12px !important; padding: 13px 15px !important; box-shadow: var(--shadow-in) !important; }
-    .alert-card { border-radius: 14px !important; padding: 13px 15px !important; }
+    .quote-box { background: #e9edf1 !important; border: 1px solid #cbd5e1 !important; border-radius: 8px !important; padding: 13px 15px !important; box-shadow: var(--shadow-in) !important; }
+    .alert-card { border-radius: 8px !important; padding: 13px 15px !important; border: 1px solid transparent !important; }
     .alert-card.ok { background: #e7f3ed !important; border-color: #b4d4c1 !important; color: #205b3a !important; }
     .stButton > button, .stDownloadButton > button {
         min-height: 42px !important; border-radius: 13px !important; border: 1px solid rgba(255,255,255,.85) !important;
@@ -674,6 +689,16 @@ with st.expander("🎙️ Capture Live Consultation Audio (Local On-Device Whisp
         "</div>",
         unsafe_allow_html=True,
     )
+    c_lang_col, _ = st.columns([1.2, 1])
+    with c_lang_col:
+        chosen_lang = st.selectbox(
+            "Spoken Language",
+            ["Tagalog / Taglish / English (Auto-Detect)", "Tagalog (Filipino - tl)", "English (en)"],
+            index=0,
+            key="ctl_whisper_lang",
+            help="Multilingual Whisper detects and transcribes Filipino/Tagalog and English accurately.",
+        )
+
     c_aud_rec, c_aud_up = st.columns(2, gap="medium")
     with c_aud_rec:
         st.markdown("<div style='font-size:0.82rem; font-weight:700; color:var(--ink); margin-bottom:4px;'>Option A: Microphone Capture</div>", unsafe_allow_html=True)
@@ -688,7 +713,8 @@ with st.expander("🎙️ Capture Live Consultation Audio (Local On-Device Whisp
         if st.button("Transcribe On-Device & Generate Audited SOAP Note", type="primary", key="btn_transcribe_audio", use_container_width=True):
             with st.spinner("Transcribing consultation audio locally via Whisper (100% on-device)..."):
                 audio_bytes = active_audio.read()
-                st_text = transcribe_audio_bytes(audio_bytes)
+                lang_code = "tl" if "Tagalog (Filipino" in chosen_lang else ("en" if "English (en)" in chosen_lang else None)
+                st_text = transcribe_audio_bytes(audio_bytes, language=lang_code)
                 pipeline = MedscribePipeline(adapter=get_adapter(selected_engine))
                 new_transcript = pipeline.parse_raw_text_to_transcript(
                     st_text,
@@ -711,7 +737,7 @@ with st.expander("🎙️ Capture Live Consultation Audio (Local On-Device Whisp
         st.markdown("---")
         st.markdown(
             """
-            <div style='background:#f1f5f9; border-left:4px solid #0f766e; padding:10px 14px; border-radius:6px; margin-bottom:8px;'>
+            <div style='background:#f1f5f9; border:1px solid #cbd5e1; padding:10px 14px; border-radius:6px; margin-bottom:8px;'>
                 <div style='font-weight:750; font-size:0.82rem; color:#0f766e; text-transform:uppercase;'>📝 Whisper On-Device Transcription Output</div>
                 <div style='margin:4px 0 0; font-size:0.82rem; color:#475569;'>Review or correct the dialogue turns below. You can edit any word and re-generate the clinical draft.</div>
             </div>
@@ -1058,7 +1084,7 @@ with col_drawer:
                 
                 st.markdown(
                     f"""
-                    <div style='padding:9px 13px; margin-bottom:8px; border-radius:8px; border:1px solid #dbe1e8; border-left:4px solid {border_clr}; background:{bg_clr}; font-size:0.86rem; line-height:1.5;'>
+                    <div style='padding:9px 13px; margin-bottom:8px; border-radius:8px; border:1px solid {border_clr}; background:{bg_clr}; font-size:0.86rem; line-height:1.5;'>
                         <div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;'>
                             <span style='font-weight:750; font-size:0.74rem; color:var(--muted); text-transform:uppercase;'>{l_num} · {spk}</span>
                             {badge_html}

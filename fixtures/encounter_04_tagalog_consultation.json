@@ -1,0 +1,57 @@
+{
+  "encounter_id": "ENC-SYN-2026-004",
+  "patient_synthetic_id": "SYN-PAT-004-DELACRUZ",
+  "encounter_date": "2026-10-10",
+  "segments": [
+    {
+      "segment_id": "seg-001",
+      "speaker": "Clinician",
+      "text": "Magandang umaga po Ginoong Dela Cruz. Ano po ang maipaglilingkod ko sa inyo ngayon?"
+    },
+    {
+      "segment_id": "seg-002",
+      "speaker": "Patient",
+      "text": "Magandang umaga doc. Masakit po ang ulo ko sa bandang batok nitong nakaraang tatlong araw."
+    },
+    {
+      "segment_id": "seg-003",
+      "speaker": "Clinician",
+      "text": "May nararamdaman po ba kayong paninikip ng dibdib, hirap sa paghinga, o pamamanhid?"
+    },
+    {
+      "segment_id": "seg-004",
+      "speaker": "Patient",
+      "text": "Wala naman po doc. Walang paninikip ng dibdib o hirap sa paghinga. Ulo lang po talaga."
+    },
+    {
+      "segment_id": "seg-005",
+      "speaker": "Clinician",
+      "text": "Tingnan po natin ang inyong blood pressure. Ang BP po ninyo ngayon ay 145 over 90."
+    },
+    {
+      "segment_id": "seg-006",
+      "speaker": "Clinician",
+      "text": "Umiinom po ba kayo ng maintenance na gamot sa altapresyon?"
+    },
+    {
+      "segment_id": "seg-007",
+      "speaker": "Patient",
+      "text": "Opo doc, umiinom ako ng Amlodipine 5mg isang beses sa umaga, pero minsan nakakalimutan ko pag Linggo."
+    },
+    {
+      "segment_id": "seg-008",
+      "speaker": "Clinician",
+      "text": "May allergy po ba kayo sa kahit anong gamot tulad ng Penicillin o Paracetamol?"
+    },
+    {
+      "segment_id": "seg-009",
+      "speaker": "Patient",
+      "text": "Wala naman po akong allergy sa kahit anong gamot."
+    },
+    {
+      "segment_id": "seg-010",
+      "speaker": "Clinician",
+      "text": "Ipagpatuloy po ang Amlodipine 5mg araw-araw. Magbawas po ng maalat at magpahinga. Bumalik po kayo dito sa susunod na linggo para sa follow-up check."
+    }
+  ]
+}

@@ -17,10 +17,11 @@ def get_whisper_model(model_size: str = "tiny") -> WhisperModel:
             _MODEL_INSTANCE = WhisperModel(model_size, device="cpu", compute_type="int8", local_files_only=False)
     return _MODEL_INSTANCE
 
-def transcribe_audio_bytes(audio_bytes: bytes) -> str:
+def transcribe_audio_bytes(audio_bytes: bytes, language: Optional[str] = None) -> str:
     """
     Transcribes raw audio bytes (from st.audio_input or st.file_uploader)
     using on-device local Whisper.
+    Supports English, Tagalog (tl), Taglish, and auto-language detection.
     Returns structured consultation transcript text with timestamps and speaker tags.
     """
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
@@ -29,7 +30,8 @@ def transcribe_audio_bytes(audio_bytes: bytes) -> str:
 
     try:
         model = get_whisper_model()
-        segments, _ = model.transcribe(tmp_path, beam_size=1, language="en")
+        lang_param = None if (not language or language in ("auto", "Auto-Detect")) else language
+        segments, _ = model.transcribe(tmp_path, beam_size=1, language=lang_param)
 
         dialogue_lines = []
         # Clinician / Patient speaker alternation heuristic for clinical dialogue turns

@@ -22,3 +22,8 @@ def test_transcribe_sample_wav_file():
         assert len(res) > 0
         assert "blood pressure" in res.lower() or "headache" in res.lower()
 
+def test_transcribe_tagalog_param():
+    # Empty audio with tl language param should safely return dialogue with zero crash
+    text = transcribe_audio_bytes(b"RIFF\x24\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00\x44\xac\x00\x00\x88\x58\x01\x00\x02\x00\x10\x00data\x00\x00\x00\x00", language="tl")
+    assert "Clinician" in text
+

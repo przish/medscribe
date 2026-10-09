@@ -20,6 +20,7 @@ def run_smoke_test():
         "encounter_01_hypertension_followup.json",
         "encounter_02_pediatric_cough_edgecase.json",
         "encounter_03_adversarial_hallucination_trap.json",
+        "encounter_04_tagalog_consultation.json",
     ]
 
     pipeline = MedscribePipeline(adapter=MockModelAdapter(mode="standard"))

@@ -381,22 +381,180 @@ class MockModelAdapter(BaseModelAdapter):
         return draft
 
     def _build_generic_draft(self, transcript: Transcript) -> SOAPNoteDraft:
-        first_seg_id = transcript.segments[0].segment_id if transcript.segments else "seg-001"
-        draft = SOAPNoteDraft(
+        if not transcript.segments:
+            return SOAPNoteDraft(
+                encounter_id=transcript.encounter_id,
+                patient_synthetic_id=transcript.patient_synthetic_id,
+                subjective=SubjectiveSection(),
+            )
+
+        cc_claims = []
+        hpi_claims = []
+        med_claims = []
+        allergy_claims = []
+        vitals_claims = []
+        pe_claims = []
+        assessment_claims = []
+        plan_med_claims = []
+        plan_care_claims = []
+
+        claim_idx = 1
+        for seg in transcript.segments:
+            text = seg.text.strip()
+            low = text.lower()
+            s_id = seg.segment_id
+
+            # Keywords covering English, Tagalog, and Taglish clinical dialogue
+            symptom_words = [
+                "masakit", "pananakit", "ulo", "tiyan", "ubo", "sipon", "lagnat", "nahihilo", "hininga",
+                "pain", "headache", "cough", "fever", "chest", "dizzy", "shortness", "fatigue", "leeg"
+            ]
+            med_words = [
+                "gamot", "inumin", "iniinom", "maintenance", "reseta", "take", "pill", "mg", "dose",
+                "amlodipine", "metformin", "paracetamol", "biogesic", "losartan", "aspirin", "antibiotic"
+            ]
+            allergy_words = ["allergy", "alergi", "allergic", "bawal", "rash", "singaw", "hives", "kati"]
+            vitals_words = ["bp", "blood pressure", "120/", "130/", "140/", "150/", "over", "temperatura", "temp", "timbang", "kilo", "weight", "pulse"]
+            assess_words = ["hypertension", "altapresyon", "diabetes", "trangkaso", "flu", "impeksyon", "infection", "hika", "asthma", "pneumonia", "impression"]
+            plan_words = ["pahinga", "rest", "diet", "iwasan", "tubig", "water", "bumalik", "balik", "next week", "follow-up", "lab", "laboratoryo", "test", "checkup"]
+
+            if any(w in low for w in allergy_words):
+                allergy_claims.append(
+                    SOAPClaim(
+                        claim_id=f"CLM-GEN-{claim_idx:02d}",
+                        category="Subjective",
+                        field="allergies",
+                        statement=text,
+                        verification_status=VerificationStatus.SUPPORTED,
+                        source_segment_ids=[s_id],
+                        source_exact_quote=text,
+                    )
+                )
+                claim_idx += 1
+            elif any(w in low for w in med_words) and ("ireseta" in low or "prescribe" in low or "take this" in low or seg.speaker.value == "Clinician"):
+                plan_med_claims.append(
+                    SOAPClaim(
+                        claim_id=f"CLM-GEN-{claim_idx:02d}",
+                        category="Plan",
+                        field="medications_advised",
+                        statement=text,
+                        verification_status=VerificationStatus.SUPPORTED,
+                        source_segment_ids=[s_id],
+                        source_exact_quote=text,
+                    )
+                )
+                claim_idx += 1
+            elif any(w in low for w in med_words):
+                med_claims.append(
+                    SOAPClaim(
+                        claim_id=f"CLM-GEN-{claim_idx:02d}",
+                        category="Subjective",
+                        field="current_medications",
+                        statement=text,
+                        verification_status=VerificationStatus.SUPPORTED,
+                        source_segment_ids=[s_id],
+                        source_exact_quote=text,
+                    )
+                )
+                claim_idx += 1
+            elif any(w in low for w in vitals_words):
+                vitals_claims.append(
+                    SOAPClaim(
+                        claim_id=f"CLM-GEN-{claim_idx:02d}",
+                        category="Objective",
+                        field="vital_signs",
+                        statement=text,
+                        verification_status=VerificationStatus.SUPPORTED,
+                        source_segment_ids=[s_id],
+                        source_exact_quote=text,
+                    )
+                )
+                claim_idx += 1
+            elif any(w in low for w in assess_words):
+                assessment_claims.append(
+                    SOAPClaim(
+                        claim_id=f"CLM-GEN-{claim_idx:02d}",
+                        category="Assessment",
+                        field="clinical_impressions",
+                        statement=text,
+                        verification_status=VerificationStatus.SUPPORTED,
+                        source_segment_ids=[s_id],
+                        source_exact_quote=text,
+                    )
+                )
+                claim_idx += 1
+            elif any(w in low for w in plan_words):
+                plan_care_claims.append(
+                    SOAPClaim(
+                        claim_id=f"CLM-GEN-{claim_idx:02d}",
+                        category="Plan",
+                        field="non_pharmacologic_care",
+                        statement=text,
+                        verification_status=VerificationStatus.SUPPORTED,
+                        source_segment_ids=[s_id],
+                        source_exact_quote=text,
+                    )
+                )
+                claim_idx += 1
+            elif any(w in low for w in symptom_words):
+                if not cc_claims:
+                    cc_claims.append(
+                        SOAPClaim(
+                            claim_id=f"CLM-GEN-{claim_idx:02d}",
+                            category="Subjective",
+                            field="chief_complaint",
+                            statement=text,
+                            verification_status=VerificationStatus.SUPPORTED,
+                            source_segment_ids=[s_id],
+                            source_exact_quote=text,
+                        )
+                    )
+                else:
+                    hpi_claims.append(
+                        SOAPClaim(
+                            claim_id=f"CLM-GEN-{claim_idx:02d}",
+                            category="Subjective",
+                            field="hpi",
+                            statement=text,
+                            verification_status=VerificationStatus.SUPPORTED,
+                            source_segment_ids=[s_id],
+                            source_exact_quote=text,
+                        )
+                    )
+                claim_idx += 1
+
+        if not cc_claims and transcript.segments:
+            first_s = transcript.segments[0]
+            cc_claims.append(
+                SOAPClaim(
+                    claim_id="CLM-GEN-01",
+                    category="Subjective",
+                    field="chief_complaint",
+                    statement=first_s.text,
+                    verification_status=VerificationStatus.SUPPORTED,
+                    source_segment_ids=[first_s.segment_id],
+                    source_exact_quote=first_s.text,
+                )
+            )
+
+        return SOAPNoteDraft(
             encounter_id=transcript.encounter_id,
             patient_synthetic_id=transcript.patient_synthetic_id,
             subjective=SubjectiveSection(
-                chief_complaint=[
-                    SOAPClaim(
-                        claim_id="CLM-GEN-01",
-                        category="Subjective",
-                        field="chief_complaint",
-                        statement=f"General consultation: {transcript.segments[0].text[:80] if transcript.segments else 'Encounter recorded'}",
-                        verification_status=VerificationStatus.SUPPORTED,
-                        source_segment_ids=[first_seg_id],
-                        source_exact_quote=transcript.segments[0].text[:40] if transcript.segments else None,
-                    )
-                ]
+                chief_complaint=cc_claims,
+                history_of_present_illness=hpi_claims,
+                current_medications=med_claims,
+                allergies=allergy_claims,
+            ),
+            objective=ObjectiveSection(
+                vital_signs=vitals_claims,
+                physical_exam=pe_claims,
+            ),
+            assessment=AssessmentSection(
+                clinical_impressions=assessment_claims,
+            ),
+            plan=PlanSection(
+                medications_advised=plan_med_claims,
+                non_pharmacologic_care=plan_care_claims,
             ),
         )
-        return draft
