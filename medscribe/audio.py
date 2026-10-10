@@ -95,7 +95,20 @@ def transcribe_audio_bytes(
             if text:
                 if is_tagalog:
                     text = clean_tagalog_speech_text(text)
-                dialogue_lines.append(f"{role} [{timestamp}]: {text}")
+
+                # Acoustic clarity & omission check
+                is_unclear = False
+                avg_lp = getattr(segment, "avg_logprob", None)
+                no_sp = getattr(segment, "no_speech_prob", None)
+                if avg_lp is not None and avg_lp < -0.85:
+                    is_unclear = True
+                elif no_sp is not None and no_sp > 0.40:
+                    is_unclear = True
+                elif any(marker in text.lower() for marker in ["[inaudible", "[unclear", "..."]):
+                    is_unclear = True
+
+                unclear_tag = " [UNCLEAR AUDIO]" if is_unclear else ""
+                dialogue_lines.append(f"{role} [{timestamp}]{unclear_tag}: {text}")
 
         # Fallback if audio was empty or silent
         if not dialogue_lines:
@@ -108,3 +121,34 @@ def transcribe_audio_bytes(
                 os.remove(tmp_path)
             except OSError:
                 pass
+
+
+def transcribe_audio_to_transcript(
+    audio_bytes: bytes,
+    encounter_id: str = "ENC-AUDIO-RECORDING",
+    patient_id: str = "PT-AUDIO-RECORDING",
+    encounter_date: str = "2026-10-10",
+    language: Optional[str] = None,
+    model_size: str = "medium",
+    initial_prompt: Optional[str] = None,
+):
+    """
+    Directly converts audio bytes into a structured Transcript schema
+    with segment-level acoustic clarity indicators and speech timestamps.
+    """
+    from medscribe.schemas import Transcript, TranscriptSegment, SpeakerRole
+
+    raw_text = transcribe_audio_bytes(
+        audio_bytes=audio_bytes,
+        language=language,
+        model_size=model_size,
+        initial_prompt=initial_prompt,
+    )
+
+    from medscribe.pipeline import MedscribePipeline
+    return MedscribePipeline().parse_raw_text_to_transcript(
+        raw_text,
+        encounter_id=encounter_id,
+        patient_id=patient_id,
+        encounter_date=encounter_date,
+    )

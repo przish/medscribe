@@ -2,6 +2,13 @@
 
 Use newest-first entries. The user owns product direction; when a new user prompt changes a decision, update this file immediately.
 
+## 2026-10-10 — Acoustic Clarity Omission Detection & On-Device Clinician Clarification
+- **The Problem Solved:** On-device speech recognition models (Whisper Medium) encounter acoustic challenges: muffled speech, whispered medication names/dosages, background hospital noise, or inaudible patient utterances. These can lead to model omissions or incomplete clinical documentation.
+- **Deterministic Detection & Flagging:** Rather than guessing or silently omitting information, Medscribe checks segment-level confidence (`avg_logprob < -0.85`, `no_speech_prob > 0.40`, inaudible markers). Flagged turns receive an `AuditFlagType.UNCLEAR_AUDIO_OMISSION` badge and appear in the missing-fields audit (`Acoustic Omission: Unclear Audio at [timestamp]`).
+- **Clinician Clarification Workflow:** The system alerts clinical personnel in both the Evidence Drawer and the Transcript Record, prompting them to listen to the recording and input the missing information.
+- **100% Local Device Persistence:** Clarifications are saved locally on the user's device (`.local_storage/clarifications.json` and session memory), automatically updating the draft, clearing omission flags, and preserving privacy with zero network calls.
+- **Export Traceability:** Exported notes include a dedicated `--- LOCAL CLINICIAN ACOUSTIC CLARIFICATIONS ---` section documenting the original STT, timestamp, and clinician-clarified text.
+
 ## 2026-10-10 — Multi-Format Documentation Adapter & Soft Elevated Neumorphic Refinement
 - **Multi-Format Note Adaptation (SOAP / APSO / General Summary):** Clinic workflows differ across specialties and health systems. The core proof engine uses Canonical Evidence Representation (`ClinicalClaim` with verbatim quotes and segment IDs), decoupling medical claims from presentation layout. Introduced live format switching:
   1. `Standard SOAP (Outpatient)`: Subjective → Objective → Assessment → Plan.

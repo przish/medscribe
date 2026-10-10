@@ -56,6 +56,11 @@ FLAG_COPY: Dict[AuditFlagType, Dict[str, str]] = {
         "why": "The patient gave conflicting information about this item.",
         "prompt": "Resolve the conflict with the patient and document the confirmed version.",
     },
+    AuditFlagType.UNCLEAR_AUDIO_OMISSION: {
+        "title": "Acoustic clarity warning: possible omitted speech",
+        "why": "The speech recognition model detected low audio confidence or inaudible speech around \u201c{quote}\u201d. Key dialogue or clinical information may have been omitted.",
+        "prompt": "Listen to the consultation recording, add the missing information in the local clarification field, and update the statement.",
+    },
 }
 
 SEVERITY_LABEL = {"info": "Information", "warning": "Needs review", "critical": "Needs review \u2013 high priority"}

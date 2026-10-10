@@ -25,6 +25,7 @@ class AuditFlagType(str, Enum):
     MEDICATION_AMBIGUITY = "medication_ambiguity"       # Missing dosage/route/frequency or family med conflation
     UNCERTAINTY_UPGRADED = "uncertainty_upgraded"       # "Possible/rule out" converted to definitive diagnosis
     TRANSCRIPT_CONTRADICTION = "contradiction"          # Patient gave conflicting statements in transcript
+    UNCLEAR_AUDIO_OMISSION = "unclear_audio_omission"   # STT low confidence, inaudible audio, or omitted information
 
 
 class TranscriptSegment(BaseModel):
@@ -33,6 +34,11 @@ class TranscriptSegment(BaseModel):
     start_time: Optional[str] = Field(None, description="HH:MM:SS or MM:SS format")
     end_time: Optional[str] = Field(None, description="HH:MM:SS or MM:SS format")
     text: str = Field(..., description="Transcript turn text verbatim")
+    avg_logprob: Optional[float] = Field(None, description="Average log probability from STT model")
+    no_speech_prob: Optional[float] = Field(None, description="Probability segment is non-speech/silence")
+    is_low_confidence: bool = Field(False, description="Flagged if acoustic confidence is low or speech was inaudible")
+    acoustic_warning: Optional[str] = Field(None, description="Explanation of acoustic clarity issue or model omission")
+    clinician_clarification: Optional[str] = Field(None, description="Clinician-entered missing information or clarified dialogue")
 
 
 class Transcript(BaseModel):

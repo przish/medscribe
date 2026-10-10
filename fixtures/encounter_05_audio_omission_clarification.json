@@ -1,0 +1,75 @@
+{
+  "encounter_id": "ENC-SYN-2026-005",
+  "patient_synthetic_id": "SYN-PAT-005-BAUTISTA",
+  "encounter_date": "2026-10-10",
+  "segments": [
+    {
+      "segment_id": "seg-001",
+      "speaker": "Clinician",
+      "start_time": "00:05",
+      "text": "Magandang hapon po Ginoong Bautista. Kumusta po ang pakiramdam ninyo ngayon?"
+    },
+    {
+      "segment_id": "seg-002",
+      "speaker": "Patient",
+      "start_time": "00:15",
+      "text": "Magandang hapon doc. Sumasakit po ang dibdib ko kapag naglalakad nang mabilis nitong nakaraang dalawang linggo."
+    },
+    {
+      "segment_id": "seg-003",
+      "speaker": "Clinician",
+      "start_time": "00:30",
+      "text": "May kasama po ba itong hirap sa paghinga o pamamanhid sa kaliwang braso?"
+    },
+    {
+      "segment_id": "seg-004",
+      "speaker": "Patient",
+      "start_time": "00:45",
+      "text": "Wala naman pong pamamanhid sa braso. Pero mabilis lang mapagod kapag umaakyat ng hagdan."
+    },
+    {
+      "segment_id": "seg-005",
+      "speaker": "Clinician",
+      "start_time": "01:05",
+      "text": "Umiinom po ba kayo ng pampababa ng cholesterol o pampaluwag ng ugat?"
+    },
+    {
+      "segment_id": "seg-006",
+      "speaker": "Patient",
+      "start_time": "01:24",
+      "text": "Umiinom din po ako ng... [inaudible speech / low confidence: 01:24] ...bago matulog.",
+      "is_low_confidence": true,
+      "avg_logprob": -1.18,
+      "no_speech_prob": 0.42,
+      "acoustic_warning": "Whisper STT confidence low (-1.18 logprob): inaudible medication name or dosage. Crucial medication information may be omitted."
+    },
+    {
+      "segment_id": "seg-007",
+      "speaker": "Clinician",
+      "start_time": "01:50",
+      "text": "May allergy po ba kayo sa kahit anong gamot tulad ng Penicillin o Aspirin?"
+    },
+    {
+      "segment_id": "seg-008",
+      "speaker": "Patient",
+      "start_time": "02:10",
+      "text": "Nagkaroon po ako ng pantal dati sa... [unclear murmur: 02:10] ...pero di ko matiyak kung anong gamot.",
+      "is_low_confidence": true,
+      "avg_logprob": -0.96,
+      "no_speech_prob": 0.38,
+      "acoustic_warning": "Whisper STT confidence low (-0.96 logprob): muffled drug allergy name. Details omitted by transcription model."
+    },
+    {
+      "segment_id": "seg-009",
+      "speaker": "Clinician",
+      "start_time": "02:35",
+      "text": "Tingnan po natin ang inyong BP. Ang presyon ninyo ngayon ay 138 over 85."
+    },
+    {
+      "segment_id": "seg-010",
+      "speaker": "Clinician",
+      "start_time": "02:55",
+      "text": "Ipapagawa po natin ang 12-lead ECG at lipid panel. Pakidala po ang inyong lalagyan ng gamot sa susunod na checkup para matiyak ang eksaktong reseta."
+    }
+  ]
+}

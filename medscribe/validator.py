@@ -139,6 +139,19 @@ class EvidenceValidator:
                     )
                 )
 
+        # 6. Unclear Audio / Potential STT Omission Check
+        for seg in valid_segments:
+            if seg.is_low_confidence and not seg.clinician_clarification:
+                flags.append(
+                    AuditFlag(
+                        flag_type=AuditFlagType.UNCLEAR_AUDIO_OMISSION,
+                        severity=AuditFlagSeverity.WARNING,
+                        message=f"Source dialogue {seg.segment_id} ({seg.start_time or 'turn'}) had low acoustic confidence or inaudible speech. Crucial details may have been omitted by the transcription model.",
+                        suggested_action="Listen to the recording, specify the missing information in the clarification field, and update this statement.",
+                    )
+                )
+                break
+
         # Determine Final Status
         claim.audit_flags = flags
         has_critical = any(f.severity == AuditFlagSeverity.CRITICAL for f in flags)
@@ -200,6 +213,12 @@ class EvidenceValidator:
             missing_fields.append("Assessment: Clinical Impression")
         if not draft.plan.follow_up_and_red_flags:
             missing_fields.append("Plan: Follow-up & Red Flags")
+
+        # Acoustic Omissions Audit (Speech turns where STT model was unclear or inaudible)
+        for seg in self.transcript.segments:
+            if seg.is_low_confidence and not seg.clinician_clarification:
+                loc = f"[{seg.start_time}] " if seg.start_time else ""
+                missing_fields.append(f"Acoustic Omission: Unclear Audio at {loc}Line {seg.segment_id} ({seg.speaker.value})")
 
         # Compile Summary
         supported_count = sum(1 for c in all_claims if c.verification_status == VerificationStatus.SUPPORTED)

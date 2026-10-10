@@ -1,4 +1,5 @@
 import html
+import json
 import os
 import re
 import streamlit as st
@@ -12,7 +13,8 @@ from medscribe.schemas import (
 from medscribe.adapters.mock_adapter import DeterministicModelAdapter
 from medscribe.adapters.ollama_adapter import OllamaModelAdapter
 from medscribe.pipeline import MedscribePipeline
-from medscribe.audio import transcribe_audio_bytes
+from medscribe.validator import EvidenceValidator
+from medscribe.audio import transcribe_audio_bytes, transcribe_audio_to_transcript
 from medscribe.ui_text import (
     describe_flag, friendly, line_label, line_map, patient_display,
     unassessed_label, UNASSESSED_COPY,
@@ -35,7 +37,36 @@ FIXTURE_PRESETS = {
     "Ethan Ramirez · Pediatric cough": "encounter_02_pediatric_cough_edgecase.json",
     "Roberto Cruz · Routine checkup (audit case)": "encounter_03_adversarial_hallucination_trap.json",
     "Ginoong Juan Dela Cruz · Tagalog Consultation": "encounter_04_tagalog_consultation.json",
+    "Ramon Bautista · Cardiology (Audio Dropout & Unclear Speech)": "encounter_05_audio_omission_clarification.json",
 }
+
+# =============================================================================
+# LOCAL DEVICE CLARIFICATION STORAGE (100% ON-DEVICE PERSISTENCE)
+# =============================================================================
+LOCAL_STORAGE_DIR = os.path.join(os.path.dirname(__file__), ".local_storage")
+os.makedirs(LOCAL_STORAGE_DIR, exist_ok=True)
+LOCAL_CLARIFICATIONS_FILE = os.path.join(LOCAL_STORAGE_DIR, "clarifications.json")
+
+def load_local_clarifications() -> dict:
+    if os.path.exists(LOCAL_CLARIFICATIONS_FILE):
+        try:
+            with open(LOCAL_CLARIFICATIONS_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+    return {}
+
+def save_local_clarification(encounter_id: str, segment_id: str, clarification: str):
+    data = load_local_clarifications()
+    if encounter_id not in data:
+        data[encounter_id] = {}
+    data[encounter_id][segment_id] = {
+        "clarification": clarification,
+        "timestamp": "2026-10-10",
+        "clinician": "Dr. Morgan (Attending)",
+    }
+    with open(LOCAL_CLARIFICATIONS_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
 
 # =============================================================================
 # INFERENCE ENGINE DETECTION & ADAPTERS
@@ -70,6 +101,13 @@ def load_preset_encounter(preset_name: str, engine_mode: str):
     adapter = get_adapter(engine_mode)
     pipeline = MedscribePipeline(adapter=adapter)
     transcript = pipeline.load_transcript_from_file(target_file)
+
+    # Restore locally saved clinician clarifications (100% on-device)
+    local_saved = load_local_clarifications().get(transcript.encounter_id, {})
+    for seg in transcript.segments:
+        if seg.segment_id in local_saved:
+            seg.clinician_clarification = local_saved[seg.segment_id].get("clarification")
+
     draft = pipeline.process_encounter(transcript)
     
     st.session_state.active_transcript = transcript
@@ -667,6 +705,11 @@ with st.container(key="source_workspace"):
                         txt = transcribe_audio_bytes(raw_bytes, language=lang_code, model_size=model_code)
                         pipeline = MedscribePipeline(adapter=get_adapter(current_engine_name))
                         new_t = pipeline.parse_raw_text_to_transcript(txt, encounter_id="ENC-AUDIO-RECORDING", patient_id="PT-AUDIO-RECORDING")
+                        # Restore any local device clarifications
+                        local_saved = load_local_clarifications().get(new_t.encounter_id, {})
+                        for seg in new_t.segments:
+                            if seg.segment_id in local_saved:
+                                seg.clinician_clarification = local_saved[seg.segment_id].get("clarification")
                         new_draft = pipeline.process_encounter(new_t)
                         st.session_state.active_transcript = new_t
                         st.session_state.draft_note = new_draft
@@ -1042,7 +1085,7 @@ with col_note:
             
         st.download_button(
             "Export Attested Clinical Note (.txt)" if sign_off else "Export Restricted (Review Attestation Required)",
-            data=MedscribePipeline().export_note_text(draft, note_format=note_format_code),
+            data=MedscribePipeline().export_note_text(draft, note_format=note_format_code, transcript=transcript),
             file_name=f"medscribe_{draft.encounter_id}_{note_format_code}_{'reviewed' if sign_off else 'draft'}.txt",
             mime="text/plain",
             disabled=not sign_off,
@@ -1117,6 +1160,38 @@ with col_drawer:
                         unsafe_allow_html=True,
                     )
     
+                # Acoustic clarity & speech omission check for cited segments
+                unclear_cites = [s for s in transcript.segments if s.segment_id in sel.source_segment_ids and s.is_low_confidence]
+                if unclear_cites:
+                    st.markdown("<div style='margin-top:14px;'></div>", unsafe_allow_html=True)
+                    for uc_seg in unclear_cites:
+                        st.markdown(
+                            f"""
+                            <div class='alert-card warn'>
+                                <div style='font-weight:750; font-size:0.88rem; margin-bottom:2px;'>🎙️ Audio Omission / Low Acoustic Confidence Detected</div>
+                                <div style='margin-bottom:4px;'>The speech recognition model had low acoustic confidence at {uc_seg.start_time or line_label(uc_seg.segment_id, LINES)}. Key clinical information (such as drug dose, timing, or symptoms) may have been omitted or muffled in the audio recording.</div>
+                                <div style='font-size:0.80rem;'><strong>Clinician Action:</strong> Listen to the audio recording and enter the missing information below. Stored 100% on local device.</div>
+                            </div>
+                            """,
+                            unsafe_allow_html=True,
+                        )
+                        c_val = uc_seg.clinician_clarification or ""
+                        clarify_key = f"clarify_audit_{uc_seg.segment_id}"
+                        new_clar = st.text_input(
+                            f"Add Missing Clinical Information ({line_label(uc_seg.segment_id, LINES)}):",
+                            value=c_val,
+                            key=clarify_key,
+                            placeholder="e.g. Atorvastatin 20mg once daily at bedtime",
+                        )
+                        if st.button("Save Clarification to Local Record", key=f"btn_save_clarify_aud_{uc_seg.segment_id}", type="primary", use_container_width=True):
+                            if new_clar.strip():
+                                save_local_clarification(transcript.encounter_id, uc_seg.segment_id, new_clar.strip())
+                                uc_seg.clinician_clarification = new_clar.strip()
+                                validator = EvidenceValidator(transcript)
+                                st.session_state.draft_note = validator.validate_note(draft)
+                                st.success("Clarification saved to local device! Draft updated.")
+                                st.rerun()
+
                 # Physician Override Editor
                 st.markdown("<div class='dr-title' style='margin-top:16px;'><span>Physician Override & Resolution</span></div>", unsafe_allow_html=True)
                 if sel.source_exact_quote and (sel.clinician_edited_statement or sel.statement) != sel.source_exact_quote:
@@ -1167,17 +1242,45 @@ with col_drawer:
                 shadow_style = "box-shadow: 4px 4px 12px rgba(15,118,110,0.22), -4px -4px 12px rgba(255,255,255,0.95);" if is_hit else "box-shadow: var(--elevated-pill);"
                 badge_html = "<span style='font-size:0.68rem; background:#0f766e; color:#ffffff; padding:3px 8px; border-radius:999px; font-weight:700;'>● CITED IN ACTIVE CLAIM</span>" if is_hit else ""
                 
+                acoustic_badge = ""
+                if seg.is_low_confidence:
+                    if seg.clinician_clarification:
+                        acoustic_badge = f"<div style='margin-top:6px; padding:6px 12px; background:#e1f1ee; border-radius:12px; font-size:0.78rem; color:#0f766e; font-weight:700;'>✓ Clarified by Clinician: “{html.escape(seg.clinician_clarification)}” (Saved on Device)</div>"
+                    else:
+                        ts_label = f"at {seg.start_time}" if seg.start_time else "this turn"
+                        acoustic_badge = f"<div style='margin-top:6px; padding:6px 12px; background:#fff2df; border-radius:12px; font-size:0.78rem; color:#9a3412; font-weight:700;'>⚠️ Low Acoustic Confidence / Possible Omitted Speech ({ts_label})</div>"
+
+                ts_display = f" [{seg.start_time}]" if seg.start_time else ""
                 t_card = (
                     f"<div style='padding:14px 18px; margin-bottom:10px; border-radius:18px; "
                     f"background:{bg_clr}; {shadow_style} font-size:0.86rem; line-height:1.5; border:none; outline:none;'>"
                     f"<div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;'>"
-                    f"<span style='font-weight:750; font-size:0.72rem; color:var(--muted); text-transform:uppercase;'>{l_num} · {spk}</span>"
+                    f"<span style='font-weight:750; font-size:0.72rem; color:var(--muted); text-transform:uppercase;'>{l_num} · {spk}{ts_display}</span>"
                     f"{badge_html}"
                     f"</div>"
                     f"<div style='color:var(--ink); font-weight:500;'>{html.escape(seg.text)}</div>"
+                    f"{acoustic_badge}"
                     f"</div>"
                 )
                 st.markdown(t_card, unsafe_allow_html=True)
+
+                if seg.is_low_confidence:
+                    with st.expander(f"🎙️ Clarify Audio / Add Missing Info ({l_num})", expanded=not bool(seg.clinician_clarification)):
+                        c_val = seg.clinician_clarification or ""
+                        c_input = st.text_input(
+                            f"Specify missing speech or clinical details heard from recording for {l_num}:",
+                            value=c_val,
+                            key=f"tr_clarify_{s_id}",
+                            placeholder="e.g. Patient stated: Atorvastatin 20mg at bedtime",
+                        )
+                        if st.button("Save Clarification Locally", key=f"btn_tr_clarify_{s_id}", type="primary", use_container_width=True):
+                            if c_input.strip():
+                                save_local_clarification(transcript.encounter_id, s_id, c_input.strip())
+                                seg.clinician_clarification = c_input.strip()
+                                validator = EvidenceValidator(transcript)
+                                st.session_state.draft_note = validator.validate_note(draft)
+                                st.success("Clarification saved to local device! Note updated.")
+                                st.rerun()
 
 # Subtle footer
 st.markdown(

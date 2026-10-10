@@ -101,3 +101,67 @@ def test_validator_medication_ambiguity(sample_transcript):
     validated = validator.validate_claim(claim)
     # Should trigger medication ambiguity warning
     assert any(f.flag_type == AuditFlagType.MEDICATION_AMBIGUITY for f in validated.audit_flags)
+
+
+def test_validator_unclear_audio_omission():
+    transcript = Transcript(
+        encounter_id="ENC-AUDIO-01",
+        patient_synthetic_id="SYN-PAT-01",
+        encounter_date="2026-10-10",
+        segments=[
+            TranscriptSegment(
+                segment_id="seg-001",
+                speaker=SpeakerRole.PATIENT,
+                start_time="01:14",
+                text="Umiinom po ako ng... [inaudible dosage] ...bago matulog.",
+                is_low_confidence=True,
+                avg_logprob=-1.20,
+            )
+        ],
+    )
+    validator = EvidenceValidator(transcript)
+    claim = SOAPClaim(
+        claim_id="CLM-MED-01",
+        category="Subjective",
+        field="current_medications",
+        statement="Takes medication at bedtime.",
+        source_segment_ids=["seg-001"],
+        source_exact_quote="bago matulog",
+    )
+    # 1. Unclarified low-confidence audio triggers UNCLEAR_AUDIO_OMISSION warning
+    validated = validator.validate_claim(claim)
+    assert any(f.flag_type == AuditFlagType.UNCLEAR_AUDIO_OMISSION for f in validated.audit_flags)
+    assert validated.verification_status == VerificationStatus.AMBIGUOUS
+
+    # 2. When clinician provides clarification, the flag resolves
+    transcript.segments[0].clinician_clarification = "Atorvastatin 20mg once daily at bedtime"
+    validator_clarified = EvidenceValidator(transcript)
+    validated_cleared = validator_clarified.validate_claim(claim)
+    assert not any(f.flag_type == AuditFlagType.UNCLEAR_AUDIO_OMISSION for f in validated_cleared.audit_flags)
+
+
+def test_validator_acoustic_omission_note_level():
+    transcript = Transcript(
+        encounter_id="ENC-AUDIO-02",
+        patient_synthetic_id="SYN-PAT-02",
+        encounter_date="2026-10-10",
+        segments=[
+            TranscriptSegment(
+                segment_id="seg-001",
+                speaker=SpeakerRole.PATIENT,
+                start_time="00:45",
+                text="[unclear audio murmur]",
+                is_low_confidence=True,
+            )
+        ],
+    )
+    validator = EvidenceValidator(transcript)
+    draft = SOAPNoteDraft(encounter_id="ENC-AUDIO-02", patient_synthetic_id="SYN-PAT-02")
+    audited = validator.validate_note(draft)
+    assert any("Acoustic Omission: Unclear Audio" in mf for mf in audited.audit_summary.missing_fields)
+
+    # Adding clarification resolves acoustic omission from missing fields
+    transcript.segments[0].clinician_clarification = "Patient stated mild dizziness when standing quickly."
+    audited_resolved = validator.validate_note(draft)
+    assert not any("Acoustic Omission: Unclear Audio" in mf for mf in audited_resolved.audit_summary.missing_fields)
+

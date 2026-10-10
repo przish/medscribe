@@ -19,7 +19,8 @@ This is a starting proposal, not an immutable decision. The user's latest instru
 6. `audit`: deterministic checks for required fields, missingness, possible contradictions, negation, and ambiguity.
 7. `review_ui`: source + draft + review flags + edit controls.
 8. `template_adapter`: maps canonical clinical claims to outpatient SOAP, Epic APSO, or General Clinical Summary structures.
-9. `export`: exports a draft with format-specific section headers and an explicit review disclaimer.
+9. `acoustic_omission_resolver`: flags low-confidence/inaudible STT segments, prompts clinician input, and persists clarifications in local device storage.
+10. `export`: exports a draft with format-specific section headers, local acoustic clarifications, and an explicit review disclaimer.
 
 ## Trust boundaries
 - Model output is untrusted and may be wrong or malformed.

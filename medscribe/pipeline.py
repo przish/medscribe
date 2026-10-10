@@ -25,17 +25,38 @@ class MedscribePipeline:
             data = json.load(f)
         return self.load_transcript_from_dict(data)
 
-    def parse_raw_text_to_transcript(self, raw_text: str, encounter_id: str = "ENC-MANUAL", patient_id: str = "SYN-PAT-CUSTOM") -> Transcript:
+    def parse_raw_text_to_transcript(
+        self,
+        raw_text: str,
+        encounter_id: str = "ENC-MANUAL",
+        patient_id: str = "SYN-PAT-CUSTOM",
+        encounter_date: str = "2026-10-10",
+    ) -> Transcript:
         """
         Splits newline-delimited transcript into structured turns.
-        Format expected: 'Clinician: text' or 'Patient: text' or standard lines.
+        Format expected: 'Clinician: text' or 'Patient [00:15]: text' or '[UNCLEAR AUDIO]'.
+        Extracts speech timestamps and flags acoustic clarity / model omission markers.
         """
         lines = [line.strip() for line in raw_text.splitlines() if line.strip()]
         segments = []
         for idx, line in enumerate(lines, start=1):
             seg_id = f"seg-{idx:03d}"
             speaker = SpeakerRole.PATIENT
-            match = re.match(r"^([a-zA-Z]+)(?:\s*\[[^\]]+\])?\s*:\s*(.*)$", line)
+            start_time = None
+            is_unclear = False
+            acoustic_warning = None
+
+            # Extract timestamp if present e.g. [01:23]
+            ts_match = re.search(r"\[(\d{1,2}:\d{2})\]", line)
+            if ts_match:
+                start_time = ts_match.group(1)
+
+            # Detect acoustic ambiguity / inaudible markers
+            if any(marker in line.lower() for marker in ["[unclear audio]", "[unclear]", "[inaudible]", "[low confidence]", "[omitted]"]):
+                is_unclear = True
+                acoustic_warning = f"Acoustic clarity issue at {start_time or f'Turn {idx}'}: STT detected low confidence or inaudible speech."
+
+            match = re.match(r"^([a-zA-Z]+)(?:\s*\[[^\]]+\])*\s*:\s*(.*)$", line)
             if match:
                 spk_str = match.group(1).lower()
                 clean_text = match.group(2).strip()
@@ -50,19 +71,24 @@ class MedscribePipeline:
                     text = clean_text
                 else:
                     text = clean_text
+            else:
+                text = line
 
             segments.append(
                 TranscriptSegment(
                     segment_id=seg_id,
                     speaker=speaker,
+                    start_time=start_time,
                     text=text,
+                    is_low_confidence=is_unclear,
+                    acoustic_warning=acoustic_warning,
                 )
             )
 
         return Transcript(
             encounter_id=encounter_id,
             patient_synthetic_id=patient_id,
-            encounter_date="2026-10-09",
+            encounter_date=encounter_date,
             segments=segments,
         )
 
@@ -82,7 +108,13 @@ class MedscribePipeline:
 
         return audited_draft
 
-    def export_note_text(self, draft: SOAPNoteDraft, include_audit: bool = True, note_format: str = "soap") -> str:
+    def export_note_text(
+        self,
+        draft: SOAPNoteDraft,
+        include_audit: bool = True,
+        note_format: str = "soap",
+        transcript: Optional[Transcript] = None,
+    ) -> str:
         """
         Renders the final clinical note as a formatted document with review disclaimers.
         Supports standard SOAP, APSO (Epic/EHR standard), and General Clinical Summary.
@@ -163,6 +195,19 @@ class MedscribePipeline:
             add_field_claims("Medications Advised", draft.plan.medications_advised)
             add_field_claims("Non-Pharmacologic Care", draft.plan.non_pharmacologic_care)
             add_field_claims("Follow-up & Red Flags", draft.plan.follow_up_and_red_flags)
+
+        # Local Clinician Clarifications (Audio Omissions / Inaudible Speech Resolved Locally)
+        if transcript:
+            clarified = [s for s in transcript.segments if s.clinician_clarification]
+            if clarified:
+                lines.append("")
+                lines.append("--- LOCAL CLINICIAN ACOUSTIC CLARIFICATIONS ---")
+                lines.append("Auditory dropouts / inaudible speech clarified on local device:")
+                for cs in clarified:
+                    ts = f"[{cs.start_time}] " if cs.start_time else ""
+                    lines.append(f"  • {cs.segment_id} {ts}({cs.speaker.value}):")
+                    lines.append(f"    Transcribed STT: “{cs.text}”")
+                    lines.append(f"    Clinician Clarification: “{cs.clinician_clarification}”")
 
         if include_audit:
             lines.append("")

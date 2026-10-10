@@ -22,7 +22,8 @@ Status legend: `[ ]` not started · `[-]` in progress · `[x]` verified complete
 - [x] Multi-format documentation engine supporting Standard SOAP, Epic APSO, and General Clinical Summary with dynamic layout reordering and export.
 - [x] Pure elevated neumorphic design with zero card outlines, zero border slop, and pillowy drop shadows matching design reference.
 - [x] Dynamic dialogue extraction for user recordings and custom Tagalog consultation dialogue.
-- [x] 21/21 automated pytest suite and end-to-end multi-format offline smoke test passing.
+- [x] Acoustic omission detection and on-device clinician clarification for low-confidence or inaudible speech segments (100% on-device persistence in `.local_storage/`).
+- [x] 24/24 automated pytest suite and end-to-end multi-format offline smoke test passing.
 - [-] Create one-minute demo video script and submission disclosures.
 
 ## Explicitly defer unless the user asks

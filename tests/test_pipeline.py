@@ -92,3 +92,32 @@ def test_pipeline_export_formats():
     assert "--- CLINICAL EXAMINATION ---" in summary_export
     assert "--- IMPRESSIONS & CARE PLAN ---" in summary_export
 
+
+def test_pipeline_encounter_05_audio_omission():
+    fixture_path = os.path.join(os.path.dirname(__file__), "..", "fixtures", "encounter_05_audio_omission_clarification.json")
+    pipeline = MedscribePipeline(adapter=MockModelAdapter(mode="standard"))
+    transcript = pipeline.load_transcript_from_file(fixture_path)
+    draft = pipeline.process_encounter(transcript)
+
+    assert draft.encounter_id == "ENC-SYN-2026-005"
+    # 1. Unclarified low-confidence audio turns detected in missing fields audit
+    assert any("Acoustic Omission: Unclear Audio" in mf for mf in draft.audit_summary.missing_fields)
+
+    # 2. Add clinician clarification on local device
+    seg_006 = [s for s in transcript.segments if s.segment_id == "seg-006"][0]
+    seg_006.clinician_clarification = "Atorvastatin 20mg once daily at bedtime"
+
+    seg_008 = [s for s in transcript.segments if s.segment_id == "seg-008"][0]
+    seg_008.clinician_clarification = "Skin rash with Amoxicillin in 2021"
+
+    # 3. Re-process with clinician clarifications attached
+    audited_resolved = pipeline.process_encounter(transcript)
+    assert not any("Acoustic Omission: Unclear Audio" in mf for mf in audited_resolved.audit_summary.missing_fields)
+
+    # 4. Verify local clinician acoustic clarifications are included in export
+    export_txt = pipeline.export_note_text(audited_resolved, transcript=transcript)
+    assert "--- LOCAL CLINICIAN ACOUSTIC CLARIFICATIONS ---" in export_txt
+    assert "Atorvastatin 20mg once daily at bedtime" in export_txt
+    assert "Skin rash with Amoxicillin in 2021" in export_txt
+
+

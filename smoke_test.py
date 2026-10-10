@@ -21,6 +21,7 @@ def run_smoke_test():
         "encounter_02_pediatric_cough_edgecase.json",
         "encounter_03_adversarial_hallucination_trap.json",
         "encounter_04_tagalog_consultation.json",
+        "encounter_05_audio_omission_clarification.json",
     ]
 
     pipeline = MedscribePipeline(adapter=MockModelAdapter(mode="standard"))
@@ -47,11 +48,21 @@ def run_smoke_test():
             print(f"  • Adversarial mode audit: {adv_draft.audit_summary.critical_flags_count} critical flags caught!")
             assert adv_draft.audit_summary.critical_flags_count > 0, "Adversarial flags failed to trigger!"
 
-        exported_soap = pipeline.export_note_text(draft, note_format="soap")
+        if "005" in fname:
+            # Acoustic omission fixture
+            print("  • Verifying audio omission detection and clinician clarification...")
+            assert any("Acoustic Omission: Unclear Audio" in mf for mf in draft.audit_summary.missing_fields)
+            transcript.segments[5].clinician_clarification = "Atorvastatin 20mg at bedtime"
+            resolved_draft = pipeline.process_encounter(transcript)
+            exported_clarified = pipeline.export_note_text(resolved_draft, transcript=transcript)
+            assert "--- LOCAL CLINICIAN ACOUSTIC CLARIFICATIONS ---" in exported_clarified
+            print("  • Acoustic omission & local clinician clarification: SUCCESS")
+
+        exported_soap = pipeline.export_note_text(draft, note_format="soap", transcript=transcript)
         assert "--- SUBJECTIVE ---" in exported_soap and "DRAFT CLINICAL DOCUMENTATION AID" in exported_soap
-        exported_apso = pipeline.export_note_text(draft, note_format="apso")
+        exported_apso = pipeline.export_note_text(draft, note_format="apso", transcript=transcript)
         assert "--- ASSESSMENT ---" in exported_apso
-        exported_summary = pipeline.export_note_text(draft, note_format="summary")
+        exported_summary = pipeline.export_note_text(draft, note_format="summary", transcript=transcript)
         assert "--- REASON FOR VISIT & HISTORY ---" in exported_summary
         print("  • Export verification (SOAP / APSO / Summary): SUCCESS")
 
