@@ -47,9 +47,13 @@ def run_smoke_test():
             print(f"  • Adversarial mode audit: {adv_draft.audit_summary.critical_flags_count} critical flags caught!")
             assert adv_draft.audit_summary.critical_flags_count > 0, "Adversarial flags failed to trigger!"
 
-        exported = pipeline.export_note_text(draft)
-        assert "DRAFT CLINICAL DOCUMENTATION AID" in exported
-        print("  • Export verification: SUCCESS")
+        exported_soap = pipeline.export_note_text(draft, note_format="soap")
+        assert "--- SUBJECTIVE ---" in exported_soap and "DRAFT CLINICAL DOCUMENTATION AID" in exported_soap
+        exported_apso = pipeline.export_note_text(draft, note_format="apso")
+        assert "--- ASSESSMENT ---" in exported_apso
+        exported_summary = pipeline.export_note_text(draft, note_format="summary")
+        assert "--- REASON FOR VISIT & HISTORY ---" in exported_summary
+        print("  • Export verification (SOAP / APSO / Summary): SUCCESS")
 
     print("\n" + "=" * 60)
     print("✅ ALL OFFLINE SMOKE TESTS PASSED!")

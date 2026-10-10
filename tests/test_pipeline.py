@@ -62,3 +62,33 @@ def test_pipeline_encounter_03_adversarial_traps():
     med_claim = draft.plan.medications_advised[0]
     assert med_claim.verification_status == VerificationStatus.UNSUPPORTED
     assert any(f.flag_type == AuditFlagType.UNSUPPORTED_CLAIM for f in med_claim.audit_flags)
+
+
+def test_pipeline_export_formats():
+    fixture_path = os.path.join(os.path.dirname(__file__), "..", "fixtures", "encounter_01_hypertension_followup.json")
+    pipeline = MedscribePipeline(adapter=MockModelAdapter(mode="standard"))
+    transcript = pipeline.load_transcript_from_file(fixture_path)
+    draft = pipeline.process_encounter(transcript)
+
+    # 1. Standard SOAP export
+    soap_export = pipeline.export_note_text(draft, note_format="soap")
+    assert "--- SUBJECTIVE ---" in soap_export
+    assert "--- OBJECTIVE ---" in soap_export
+    assert "--- ASSESSMENT ---" in soap_export
+    assert "--- PLAN ---" in soap_export
+    assert soap_export.index("--- SUBJECTIVE ---") < soap_export.index("--- ASSESSMENT ---")
+
+    # 2. APSO (Epic EHR) export: Assessment & Plan first
+    apso_export = pipeline.export_note_text(draft, note_format="apso")
+    assert "--- ASSESSMENT ---" in apso_export
+    assert "--- PLAN ---" in apso_export
+    assert "--- SUBJECTIVE ---" in apso_export
+    assert "--- OBJECTIVE ---" in apso_export
+    assert apso_export.index("--- ASSESSMENT ---") < apso_export.index("--- SUBJECTIVE ---")
+
+    # 3. General Clinical Summary export
+    summary_export = pipeline.export_note_text(draft, note_format="summary")
+    assert "--- REASON FOR VISIT & HISTORY ---" in summary_export
+    assert "--- CLINICAL EXAMINATION ---" in summary_export
+    assert "--- IMPRESSIONS & CARE PLAN ---" in summary_export
+

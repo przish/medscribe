@@ -19,8 +19,10 @@ Status legend: `[ ]` not started · `[-]` in progress · `[x]` verified complete
 - [x] Improve evidence highlighting and claim navigation. (Verified: elevated neumorphic proof mode, active claim halo, verbatim quote preview, and physician override editing).
 - [x] Streamline EHR audit workspace by removing repetitive dialogue card button strip and colored card side stripes.
 - [x] Unify all features into a single-page workspace with custom SVG medical logo, elevated top navigation bar, and consultation source switcher (Verified in `app.py`).
-- [x] Eradicate mock terminology across adapters, pipeline, and UI (`DeterministicClinicalEngine`).
-- [x] 20/20 automated pytest suite and end-to-end offline smoke test passing.
+- [x] Multi-format documentation engine supporting Standard SOAP, Epic APSO, and General Clinical Summary with dynamic layout reordering and export.
+- [x] Pure elevated neumorphic design with zero card outlines, zero border slop, and pillowy drop shadows matching design reference.
+- [x] Dynamic dialogue extraction for user recordings and custom Tagalog consultation dialogue.
+- [x] 21/21 automated pytest suite and end-to-end multi-format offline smoke test passing.
 - [-] Create one-minute demo video script and submission disclosures.
 
 ## Explicitly defer unless the user asks

@@ -868,28 +868,6 @@ col_f4.button(
 # =============================================================================
 col_note, col_drawer = st.columns([1.4, 1.0], gap="medium")
 
-SECTIONS = [
-    ("Subjective", [
-        ("Chief Complaint", draft.subjective.chief_complaint),
-        ("History of Present Illness", draft.subjective.history_of_present_illness),
-        ("Current Regimen", draft.subjective.current_medications),
-        ("Allergies", draft.subjective.allergies),
-    ]),
-    ("Objective", [
-        ("Vital Signs", draft.objective.vital_signs),
-        ("Physical Examination", draft.objective.physical_exam),
-        ("Diagnostic Tests", draft.objective.diagnostic_tests),
-    ]),
-    ("Assessment", [
-        ("Clinical Impressions", draft.assessment.clinical_impressions),
-    ]),
-    ("Plan", [
-        ("Prescriptions Advised", draft.plan.medications_advised),
-        ("Non-Pharmacologic Care", draft.plan.non_pharmacologic_care),
-        ("Follow-up & Return Precautions", draft.plan.follow_up_and_red_flags),
-    ]),
-]
-
 def render_claim_row(c):
     sel = st.session_state.selected_claim
     is_sel = sel and sel.claim_id == c.claim_id
@@ -930,6 +908,94 @@ def render_claim_row(c):
 # Left Column: Primary Note Pane
 with col_note:
     with st.container(key="note_pane"):
+        c_nhdr, c_nfmt = st.columns([1.3, 1.2])
+        with c_nhdr:
+            st.markdown(
+                "<div style='font-size:0.78rem; font-weight:800; letter-spacing:0.12em; color:#334155; text-transform:uppercase; padding-top:8px;'>Clinical Documentation Record</div>",
+                unsafe_allow_html=True,
+            )
+        with c_nfmt:
+            format_options = [
+                "Standard SOAP (Outpatient)",
+                "APSO Format (Epic EHR Standard)",
+                "General Clinical Summary",
+            ]
+            selected_format = st.selectbox(
+                "Documentation Format",
+                format_options,
+                index=0,
+                key="main_ctl_format",
+                label_visibility="collapsed",
+                help="Adapt clinical note schema between Outpatient SOAP, Epic APSO, or General Clinical Summary.",
+            )
+
+        note_format_code = "apso" if "APSO" in selected_format else ("summary" if "Summary" in selected_format else "soap")
+
+        if note_format_code == "apso":
+            SECTIONS = [
+                ("Assessment", [
+                    ("Clinical Impressions", draft.assessment.clinical_impressions),
+                ]),
+                ("Plan", [
+                    ("Prescriptions Advised", draft.plan.medications_advised),
+                    ("Non-Pharmacologic Care", draft.plan.non_pharmacologic_care),
+                    ("Follow-up & Return Precautions", draft.plan.follow_up_and_red_flags),
+                ]),
+                ("Subjective", [
+                    ("Chief Complaint", draft.subjective.chief_complaint),
+                    ("History of Present Illness", draft.subjective.history_of_present_illness),
+                    ("Current Regimen", draft.subjective.current_medications),
+                    ("Allergies", draft.subjective.allergies),
+                ]),
+                ("Objective", [
+                    ("Vital Signs", draft.objective.vital_signs),
+                    ("Physical Examination", draft.objective.physical_exam),
+                    ("Diagnostic Tests", draft.objective.diagnostic_tests),
+                ]),
+            ]
+        elif note_format_code == "summary":
+            SECTIONS = [
+                ("Reason for Visit & History", [
+                    ("Chief Complaint", draft.subjective.chief_complaint),
+                    ("History of Present Illness", draft.subjective.history_of_present_illness),
+                    ("Current Regimen", draft.subjective.current_medications),
+                    ("Allergies", draft.subjective.allergies),
+                ]),
+                ("Clinical Examination", [
+                    ("Vital Signs", draft.objective.vital_signs),
+                    ("Physical Examination", draft.objective.physical_exam),
+                    ("Diagnostic Tests", draft.objective.diagnostic_tests),
+                ]),
+                ("Impressions & Care Plan", [
+                    ("Clinical Impressions", draft.assessment.clinical_impressions),
+                    ("Prescriptions Advised", draft.plan.medications_advised),
+                    ("Non-Pharmacologic Care", draft.plan.non_pharmacologic_care),
+                    ("Follow-up & Return Precautions", draft.plan.follow_up_and_red_flags),
+                ]),
+            ]
+        else:
+            SECTIONS = [
+                ("Subjective", [
+                    ("Chief Complaint", draft.subjective.chief_complaint),
+                    ("History of Present Illness", draft.subjective.history_of_present_illness),
+                    ("Current Regimen", draft.subjective.current_medications),
+                    ("Allergies", draft.subjective.allergies),
+                ]),
+                ("Objective", [
+                    ("Vital Signs", draft.objective.vital_signs),
+                    ("Physical Examination", draft.objective.physical_exam),
+                    ("Diagnostic Tests", draft.objective.diagnostic_tests),
+                ]),
+                ("Assessment", [
+                    ("Clinical Impressions", draft.assessment.clinical_impressions),
+                ]),
+                ("Plan", [
+                    ("Prescriptions Advised", draft.plan.medications_advised),
+                    ("Non-Pharmacologic Care", draft.plan.non_pharmacologic_care),
+                    ("Follow-up & Return Precautions", draft.plan.follow_up_and_red_flags),
+                ]),
+            ]
+
         if active_filter == "unassessed":
             st.markdown("<div class='sec-header'>Unassessed Clinical Parameters</div>", unsafe_allow_html=True)
             if not draft.audit_summary.missing_fields:
@@ -976,8 +1042,8 @@ with col_note:
             
         st.download_button(
             "Export Attested Clinical Note (.txt)" if sign_off else "Export Restricted (Review Attestation Required)",
-            data=MedscribePipeline().export_note_text(draft),
-            file_name=f"medscribe_{draft.encounter_id}_{'reviewed' if sign_off else 'draft'}.txt",
+            data=MedscribePipeline().export_note_text(draft, note_format=note_format_code),
+            file_name=f"medscribe_{draft.encounter_id}_{note_format_code}_{'reviewed' if sign_off else 'draft'}.txt",
             mime="text/plain",
             disabled=not sign_off,
             type="primary" if sign_off else "secondary",

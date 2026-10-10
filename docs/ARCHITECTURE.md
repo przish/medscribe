@@ -18,7 +18,8 @@ This is a starting proposal, not an immutable decision. The user's latest instru
 5. `evidence_validator`: rejects missing/unknown IDs and mismatched quotes; flags statements without adequate support.
 6. `audit`: deterministic checks for required fields, missingness, possible contradictions, negation, and ambiguity.
 7. `review_ui`: source + draft + review flags + edit controls.
-8. `export`: exports a draft with an explicit review disclaimer.
+8. `template_adapter`: maps canonical clinical claims to outpatient SOAP, Epic APSO, or General Clinical Summary structures.
+9. `export`: exports a draft with format-specific section headers and an explicit review disclaimer.
 
 ## Trust boundaries
 - Model output is untrusted and may be wrong or malformed.

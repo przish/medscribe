@@ -82,18 +82,19 @@ class MedscribePipeline:
 
         return audited_draft
 
-    def export_note_text(self, draft: SOAPNoteDraft, include_audit: bool = True) -> str:
+    def export_note_text(self, draft: SOAPNoteDraft, include_audit: bool = True, note_format: str = "soap") -> str:
         """
-        Renders the final SOAP note as a formatted clinical document with review disclaimers.
+        Renders the final clinical note as a formatted document with review disclaimers.
+        Supports standard SOAP, APSO (Epic/EHR standard), and General Clinical Summary.
         """
         status_banner = "VERIFIED BY CLINICIAN" if draft.clinician_review_confirmed else "UNVERIFIED DRAFT — CLINICIAN REVIEW REQUIRED"
+        format_title = "APSO FORMAT (EHR STANDARD)" if note_format == "apso" else ("GENERAL CLINICAL SUMMARY" if note_format == "summary" else "SOAP DOCUMENTATION")
         lines = [
-            f"=== MEDSCRIBE CLINICAL DOCUMENTATION [{status_banner}] ===",
+            f"=== MEDSCRIBE {format_title} [{status_banner}] ===",
             f"Encounter ID: {draft.encounter_id}",
             f"Patient ID:   {draft.patient_synthetic_id}",
             f"Notice:       {draft.disclaimer}",
             "",
-            "--- SUBJECTIVE ---",
         ]
 
         def add_field_claims(header: str, claims):
@@ -107,26 +108,61 @@ class MedscribePipeline:
             else:
                 lines.append(f"  {header}: [NOT DOCUMENTED / UNASSESSED]")
 
-        add_field_claims("Chief Complaint", draft.subjective.chief_complaint)
-        add_field_claims("History of Present Illness", draft.subjective.history_of_present_illness)
-        add_field_claims("Current Medications", draft.subjective.current_medications)
-        add_field_claims("Allergies", draft.subjective.allergies)
-
-        lines.append("")
-        lines.append("--- OBJECTIVE ---")
-        add_field_claims("Vital Signs", draft.objective.vital_signs)
-        add_field_claims("Physical Examination", draft.objective.physical_exam)
-        add_field_claims("Diagnostic Tests", draft.objective.diagnostic_tests)
-
-        lines.append("")
-        lines.append("--- ASSESSMENT ---")
-        add_field_claims("Clinical Impressions", draft.assessment.clinical_impressions)
-
-        lines.append("")
-        lines.append("--- PLAN ---")
-        add_field_claims("Medications Advised", draft.plan.medications_advised)
-        add_field_claims("Non-Pharmacologic Care", draft.plan.non_pharmacologic_care)
-        add_field_claims("Follow-up & Red Flags", draft.plan.follow_up_and_red_flags)
+        if note_format == "apso":
+            lines.append("--- ASSESSMENT ---")
+            add_field_claims("Clinical Impressions", draft.assessment.clinical_impressions)
+            lines.append("")
+            lines.append("--- PLAN ---")
+            add_field_claims("Medications Advised", draft.plan.medications_advised)
+            add_field_claims("Non-Pharmacologic Care", draft.plan.non_pharmacologic_care)
+            add_field_claims("Follow-up & Red Flags", draft.plan.follow_up_and_red_flags)
+            lines.append("")
+            lines.append("--- SUBJECTIVE ---")
+            add_field_claims("Chief Complaint", draft.subjective.chief_complaint)
+            add_field_claims("History of Present Illness", draft.subjective.history_of_present_illness)
+            add_field_claims("Current Medications", draft.subjective.current_medications)
+            add_field_claims("Allergies", draft.subjective.allergies)
+            lines.append("")
+            lines.append("--- OBJECTIVE ---")
+            add_field_claims("Vital Signs", draft.objective.vital_signs)
+            add_field_claims("Physical Examination", draft.objective.physical_exam)
+            add_field_claims("Diagnostic Tests", draft.objective.diagnostic_tests)
+        elif note_format == "summary":
+            lines.append("--- REASON FOR VISIT & HISTORY ---")
+            add_field_claims("Chief Complaint", draft.subjective.chief_complaint)
+            add_field_claims("History of Present Illness", draft.subjective.history_of_present_illness)
+            add_field_claims("Current Medications", draft.subjective.current_medications)
+            add_field_claims("Allergies", draft.subjective.allergies)
+            lines.append("")
+            lines.append("--- CLINICAL EXAMINATION ---")
+            add_field_claims("Vital Signs", draft.objective.vital_signs)
+            add_field_claims("Physical Examination", draft.objective.physical_exam)
+            add_field_claims("Diagnostic Tests", draft.objective.diagnostic_tests)
+            lines.append("")
+            lines.append("--- IMPRESSIONS & CARE PLAN ---")
+            add_field_claims("Clinical Impressions", draft.assessment.clinical_impressions)
+            add_field_claims("Medications Advised", draft.plan.medications_advised)
+            add_field_claims("Non-Pharmacologic Care", draft.plan.non_pharmacologic_care)
+            add_field_claims("Follow-up & Red Flags", draft.plan.follow_up_and_red_flags)
+        else:
+            lines.append("--- SUBJECTIVE ---")
+            add_field_claims("Chief Complaint", draft.subjective.chief_complaint)
+            add_field_claims("History of Present Illness", draft.subjective.history_of_present_illness)
+            add_field_claims("Current Medications", draft.subjective.current_medications)
+            add_field_claims("Allergies", draft.subjective.allergies)
+            lines.append("")
+            lines.append("--- OBJECTIVE ---")
+            add_field_claims("Vital Signs", draft.objective.vital_signs)
+            add_field_claims("Physical Examination", draft.objective.physical_exam)
+            add_field_claims("Diagnostic Tests", draft.objective.diagnostic_tests)
+            lines.append("")
+            lines.append("--- ASSESSMENT ---")
+            add_field_claims("Clinical Impressions", draft.assessment.clinical_impressions)
+            lines.append("")
+            lines.append("--- PLAN ---")
+            add_field_claims("Medications Advised", draft.plan.medications_advised)
+            add_field_claims("Non-Pharmacologic Care", draft.plan.non_pharmacologic_care)
+            add_field_claims("Follow-up & Red Flags", draft.plan.follow_up_and_red_flags)
 
         if include_audit:
             lines.append("")

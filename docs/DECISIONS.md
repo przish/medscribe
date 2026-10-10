@@ -2,6 +2,14 @@
 
 Use newest-first entries. The user owns product direction; when a new user prompt changes a decision, update this file immediately.
 
+## 2026-10-10 — Multi-Format Documentation Adapter & Soft Elevated Neumorphic Refinement
+- **Multi-Format Note Adaptation (SOAP / APSO / General Summary):** Clinic workflows differ across specialties and health systems. The core proof engine uses Canonical Evidence Representation (`ClinicalClaim` with verbatim quotes and segment IDs), decoupling medical claims from presentation layout. Introduced live format switching:
+  1. `Standard SOAP (Outpatient)`: Subjective → Objective → Assessment → Plan.
+  2. `APSO Format (Epic EHR Standard)`: Assessment → Plan → Subjective → Objective.
+  3. `General Clinical Summary`: Reason for Visit & History → Clinical Examination → Impressions & Care Plan.
+- **Dynamic Dialogue Extraction:** User-uploaded audio or direct dialogue input is parsed dynamically into clinical claims, extracting actual dialogue turns rather than falling back to hardcoded demo cases.
+- **Pure Elevated Neumorphic Design (Zero Outlines):** Eliminated all card borders, button strokes, and side stripes. Styled surfaces with soft dual-direction positive drop shadows (`box-shadow: 8px 8px 18px rgba(160, 172, 188, 0.35), -8px -8px 18px rgba(255, 255, 255, 0.95)`) on a warm-gray canvas (`#eef1f5`), providing pillowy edges matching the design reference.
+
 ## 2026-10-10 — On-Device Whisper Audio Capture & Streamlined EHR Audit Drawer
 - **On-Device Speech-to-Text:** Integrated local `faster-whisper` (tiny on CPU, int8 quantized) supporting live microphone recording via Streamlit native `st.audio_input` and audio file upload (`.wav`, `.mp3`, `.m4a`). Validated 100% offline with zero network sockets.
 - **Drawer Streamlining:** Eliminated repetitive vertical dialogue turn card buttons from the right evidence drawer (removing visual clutter and redundant button stacking). The evidence drawer now focuses strictly on the active statement's verbatim transcript quote, clinical audit translation, suggested verbatim wording 1-click accept, and full inline modification editor.
